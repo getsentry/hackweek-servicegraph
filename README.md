@@ -61,17 +61,15 @@ Content-Type: application/json
     "ip": "locally observed ip address",
     "type": "what type of host am I",
     "description": "human readable description",
-    "id": "<host_id>", # optional host id obtained from previous calls, the registrar is encouraged but is not required to retain the id 
+    "id": "<host_id>", # optional host id obtained from previous calls, the registrar is encouraged but is not required to retain the id
   }
 }
 ```
 
 The response format is the same as the request, except that the `"id"` is always provided.
-The `id` is an uuid without any dashes ("-").  From now on responses from this service
-should pass the node ID around. For instance via HTTP the `x-servicegraph-host-node-id`
+The `id` is an uuid without any dashes ("-"). From now on responses from this service
+should pass the node ID around. For instance via HTTP the `x-servicegraph-node-id`
 header shall be used.
-
-
 
 ### Service Registration
 
@@ -89,7 +87,7 @@ Content-Type: application/json
     "host_node_id": "node-id of the host we're running on",
     "type": "what type of service am i",
     "description": "human readable description"
-    "id": "<service_id>", # optional service id obtained from previous calls,  the registrar is encouraged but is not required to retain the id 
+    "id": "<service_id>", # optional service id obtained from previous calls,  the registrar is encouraged but is not required to retain the id
   }
 }
 ```
