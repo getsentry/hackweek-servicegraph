@@ -7,7 +7,7 @@ import styled from "styled-components";
 console.log("rawData", rawData);
 
 interface Node extends SimulationNodeDatum {
-  id: String;
+  id: string;
   start: number;
   end: number;
 }
@@ -137,6 +137,13 @@ function GraphChart() {
         nodes = nodes.map((d: Node) => Object.assign(old.get(d.id) || {}, d));
         links = links.map((d: Connection) => Object.assign({}, d));
 
+        // https://stackoverflow.com/a/57037786
+        const setOfNodeIds = nodes.reduce((acc: Set<string>, d: Node) => {
+          acc.add(d.id);
+          return acc;
+        }, new Set());
+        const domain = Array.from(new Set(setOfNodeIds));
+
         node = node
           .data(nodes, (d: Node) => String(d.id))
           .join((enter) =>
@@ -145,9 +152,18 @@ function GraphChart() {
               // radius
               .attr("r", 5)
               // .call(drag(simulation))
-              .call((node) =>
-                node.append("title").text((d: Node) => String(d.id))
-              )
+              .call((node) => {
+                return node
+                  .attr("fill", (d: Node) => {
+                    const index = domain.indexOf(d.id);
+                    if (index >= 0) {
+                      return d3.interpolateSinebow(index / domain.length);
+                    }
+                    return "#000";
+                  })
+                  .append("title")
+                  .text((d: Node) => String(d.id));
+              })
           );
 
         link = link
@@ -189,7 +205,7 @@ function GraphChart() {
       }
       update(times[i]);
 
-      timeoutID = setTimeout(doUpdate, 1000);
+      // timeoutID = setTimeout(doUpdate, 1000);
     }
 
     doUpdate();
