@@ -20,3 +20,14 @@ schema:
 clickhouse-shell:
 	@$(CLICKHOUSE_SHELL) -d servicegraph
 .PHONY: clickhouse-shell
+
+setup: setup-venv
+.PHONY: setup
+
+setup-venv: .venv/bin/python
+.PHONY: setup-venv
+
+.venv/bin/python: Makefile
+	@rm -rf .venv
+	@which virtualenv || sudo pip install virtualenv
+	virtualenv -p 3.6.10 .venv
