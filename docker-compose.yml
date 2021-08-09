@@ -11,8 +11,6 @@ services:
       - "clickhouse:/var/lib/clickhouse"
     ulimits:
       nofile: 262144
-  redis:
-    image: redis:5.0-alpine
 
 volumes:
   clickhouse:
