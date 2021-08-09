@@ -153,5 +153,5 @@ Content-Type: application/json
 
 - `ok`: the connection was healthy
 - `expected_error`: the connection encountered an expected error (eg: failure response)
-- `unexpected_Error`: the connection encountered un unexpected error (eg: internal server error)
+- `unexpected_error`: the connection encountered un unexpected error (eg: internal server error)
 - `fatal`: the connection failed in a fatal way (eg: service unreachable)
