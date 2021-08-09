@@ -9,119 +9,75 @@ Each participant in the system reports to a central service its observations of
 connections in the graph. It effectively reports what it talked to, why and how
 this went.
 
-## Scopes
-
-Scopes are strictly nested. A _host_ contains _services_ each of which consists
-of multiple _transactions_.
-
-- `host`: this is a logical host
-- `service`: a service represents a logical piece of software that does something
-- `transaction`: a transaction is a part of a service that represents some work
-
-Scopes in the protocol formatted as such:
-
-```
-host
-service@host
-service@host/transaction
-```
-
-Because scopes are nested connections can be made between hosts, services or
-transactions. If a service talks to a transaction it implicitly also conencts
-to the host and service.
-
-## Temporal Nature
-
-For simplicity reasons everything is time based within a one minute bucket.
-
 ## Nodes
 
-Nodes need to know who they are. As per policy host and service level nodes
-need to be registered, transactions should not be. That's because transactions
-look the same for both sides of a connection, but services and hosts do not.
+Nodes need to know who they are. All nodes need to be registered with the graph
+service so metadata is held.
 
 At the moment the system only describes registered nodes. That means only
 connections between nodes are permissible that first registered themselves
 under `/identify`. Most importantly this means you cannot yet describe
 connections to external services.
 
-### Host Registration
+### Node Scopes
 
-When a host first reports it needs to know its ID. For this it registers
-itself with the API:
+Nodes of different scopes are strictly nested. We only defined two levels:
+`service` which is a service (like a web application, database server etc.)
+and `transaction` which is a node underneath. A `transaction` exists within
+a `service` always. A `transaction` without service is not permissible.
+
+Scopes in the protocol formatted as such:
+
+```
+service
+service/transaction
+```
+
+We reserve `service@host` and `service@host/transaction` for future extensions.
+
+Because scopes are nested, connections can be made between services or
+transactions. If a service talks to a transaction it implicitly also conencts
+to the service.
+
+### Temporal Nature
+
+For simplicity reasons everything is time based within a one minute bucket.
+
+### Node Registration
+
+When a service or transaction first reports a connection it needs to know the IDs
+of the nodes. IDs can be rolled by the application itself. It's free to define the
+IDs itself as it wants and report them even before reporting them to the servicegraph
+as a node but until the node is registered they won't be queryable.
 
 ```yaml
-POST /identify
+POST /submit
 Content-Type: application/json
 
 {
-  # this registers a host
-  "host": {
-    "hostname": "self reported host name",
-    "ip": "locally observed ip address",
-    "type": "what type of host am I",
-    "description": "human readable description",
-    "id": "<host_id>", # optional host id obtained from previous calls, the registrar is encouraged but is not required to retain the id
-    "project_id": "The id of the project (a la sentry)",
-  }
+  "project_id": 42,  # the id of project to report to
+  "nodes": [
+    {
+      "node_id": "NODE_ID as guid",
+      "name": "human readable name of the node reported in the UI",
+      "description": "human readable extended description for the UI",
+      "type": "service | transaction",
+      "parent_id": "id of the parent node (eg: service node id) for transactions"
+    }
+  ]
 }
 ```
 
-The response format is the same as the request, except that the `"id"` is always provided.
-The `id` is an uuid without any dashes ("-"). From now on responses from this service
-should pass the node ID around. For instance via HTTP the `x-servicegraph-node-id`
-header shall be used.
+### Node ID Communication
 
-### Service Registration
+When a `from` node sends a request to a `to` node, the `to` node should report the
+IDs as a response headers called `servicegraph-context` in the following format:
 
-When a service first reports it needs to know its ID. For this it registers
-itself with the API:
-
-```yaml
-POST /identify
-Content-Type: application/json
-
-{
-  # this registers a service
-  "service": {
-    "name": "my-service",
-    "host_node_id": "node-id of the host we're running on",
-    "type": "what type of service am i",
-    "description": "human readable description"
-    "id": "<service_id>", # optional service id obtained from previous calls,  the registrar is encouraged but is not required to retain the id
-    "project_id": "The id of the project (a la sentry)",
-  }
-}
+```
+servicegraph-context: service-node=SERVICE_ID transaction-node=TRANSACTION_ID
 ```
 
-The response format is the same as the request, except that the `"id"` is always provided.
-The `id` is an uuid without any dashes ("-"). From now on responses from this service
-should pass the node ID around. For instance via HTTP the `x-servicegraph-service-node-id`
-header shall be used.
-
-For this to work the host needs to be registered first. For this to work something
-on the host first needs to register it and then pass the host to the service
-by using the `SERVICEGRAPH_HOST_NODE_ID` environment variable.
-
-## Node Descriptors
-
-Node descriptors are strings like this:
-
-```yaml
-# a registered node
-node:NODE_ID
-
-# a transaction on a registered node
-node:NODE_ID/transaction-name
-
-# an unknown http service
-http:host-name
-
-# an unknown http service with an endpoint
-http:host-name/endpoint
-```
-
-## Node Database
+### Node Registry
 
 The servicegraph reports nodes in a somewhat mutable data store. Multiple
 descriptions of the same node can be merged into one. A node is given a UUID
@@ -129,27 +85,28 @@ which identifies it internally in the system.
 
 ## Reporting Connections
 
-Reporting of connections between two instrumented node:
+To report connections one submits the edges between nodes in the graph.
 
 ```yaml
-POST /connections
+POST /submit
 Content-Type: application/json
 {
-  "connections": {
-    # all connections in a 60 second window
-    "2021-06-09T00:00:00Z": [
-      {
-        "from": "descriptor of from side",
-        "to": "descriptor of to side",
-        "n": "how many times did this happen?",
-        "status": "status enum"
-      }
-    ]
-  }
+  "project_id": 42,  # the id of project to report to
+  "edges": [
+    {
+      "ts": "2021-06-09T00:00:00Z",
+      "from": "FROM_NODE_ID",
+      "to": "TO_NODE_ID",
+      "status": "status code",
+      "n": "how many times did this happen"
+    }
+  ]
 }
 ```
 
 **Status**:
+
+The following status flags can exist:
 
 - `ok`: the connection was healthy
 - `expected_error`: the connection encountered an expected error (eg: failure response)
