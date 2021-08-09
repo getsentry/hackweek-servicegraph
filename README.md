@@ -66,17 +66,11 @@ Content-Type: application/json
 }
 ```
 
-The response is the registered node ID. From now on responses from this service
+The response format is the same as the request, except that the `"id"` is always provided.
+The `id` is an uuid without any dashes ("-").  From now on responses from this service
 should pass the node ID around. For instance via HTTP the `x-servicegraph-host-node-id`
 header shall be used.
 
-The response format is:
-```json
-{
-  "id": "8a20e955ede44c2f81e4798f37e0d9e1"
-}
-```
-where `id` is an uuid without any dashes ("-").
 
 
 ### Service Registration
@@ -100,7 +94,8 @@ Content-Type: application/json
 }
 ```
 
-The response is the registered node ID. From now on responses from this service
+The response format is the same as the request, except that the `"id"` is always provided.
+The `id` is an uuid without any dashes ("-"). From now on responses from this service
 should pass the node ID around. For instance via HTTP the `x-servicegraph-service-node-id`
 header shall be used.
 
