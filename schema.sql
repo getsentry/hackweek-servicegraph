@@ -1,5 +1,14 @@
 CREATE DATABASE IF NOT EXISTS servicegraph;
 
+-- For now nodes just map UUID to service names
+-- Hosts and other stuff to be added later
+CREATE TABLE IF NOT EXISTS servicegraph.nodes (
+    id UUID,
+    service_name String,
+    timestamp DateTime
+) ENGINE = ReplacingMergeTree()
+ORDER BY (id, timestamp);
+
 CREATE TABLE IF NOT EXISTS servicegraph.connections (
     -- the timestamp of the checkin
     checkin_time DateTime,
