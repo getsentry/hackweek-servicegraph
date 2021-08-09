@@ -1,37 +1,44 @@
 import React from "react";
 import * as d3 from "d3";
 import rawData from "./data.json";
-import { ForceLink } from "d3";
+import { ForceLink, SimulationNodeDatum, SimulationLinkDatum } from "d3";
 import styled from "styled-components";
 
 console.log("rawData", rawData);
 
-type Node = {
+interface Node extends SimulationNodeDatum {
   id: String;
-};
+  start: number;
+  end: number;
+}
 
-type Connection = {
-  source: String;
-  destination: String;
-  timestamp: Date;
-};
+interface Connection extends SimulationLinkDatum<Node> {
+  source: string | Node;
+  target: string | Node;
+  start: number;
+  end: number;
+}
 
 type GraphData = {
   nodes: Node[];
-  connections: Connection[];
+  links: Connection[];
 };
 
-const data = {
-  nodes: rawData.nodes.map((d) => ({
-    ...d,
-    start: new Date(d.start).getTime(),
-    end: new Date(d.end).getTime(),
-  })),
-  links: rawData.links.map((d) => ({
-    ...d,
-    start: new Date(d.start).getTime(),
-    end: new Date(d.end).getTime(),
-  })),
+const data: GraphData = {
+  nodes: rawData.nodes.map((d: any): Node => {
+    return {
+      ...d,
+      start: new Date(d.start).getTime(),
+      end: new Date(d.end).getTime(),
+    };
+  }),
+  links: rawData.links.map((d: any): Connection => {
+    return {
+      ...d,
+      start: new Date(d.start).getTime(),
+      end: new Date(d.end).getTime(),
+    };
+  }),
 };
 
 // const data: GraphData = {
@@ -73,7 +80,9 @@ function GraphChart() {
       .force("charge", d3.forceManyBody())
       .force(
         "link",
-        d3.forceLink().id((d: any) => d.id)
+        d3.forceLink<Node, Connection>().id((d: Node) => {
+          return String(d.id);
+        })
       )
       .force("x", d3.forceX())
       .force("y", d3.forceY())
@@ -95,71 +104,80 @@ function GraphChart() {
       .append("g")
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
-      .selectAll("line");
+      .selectAll<SVGSVGElement, Connection>("line");
 
     let node = svg
       .append("g")
       .attr("stroke", "#fff")
       .attr("stroke-width", 1.5)
-      .selectAll("circle");
+      .selectAll<SVGCircleElement, Node>("circle");
 
     function ticked() {
-      node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
+      node
+        .attr("cx", (d: Node) => {
+          // console.log("d", d);
+          return d.x ?? 0;
+        })
+        .attr("cy", (d: Node) => d.y ?? 0);
 
       link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+        .attr("x1", (d: Connection) => (d.source as Node).x ?? 0)
+        .attr("y1", (d: Connection) => (d.source as Node).y ?? 0)
+        .attr("x2", (d: Connection) => (d.target as Node).x ?? 0)
+        .attr("y2", (d: Connection) => (d.target as Node).y ?? 0);
     }
 
-    const chart = Object.assign(svg.node(), {
-      update({ nodes, links }: { nodes: any; links: any }) {
+    const chart: d3.BaseType & {
+      update({ nodes, links }: { nodes: Node[]; links: Connection[] }): void;
+    } = Object.assign(svg.node(), {
+      update({ nodes, links }: { nodes: Node[]; links: Connection[] }) {
         // Make a shallow copy to protect against mutation, while
         // recycling old nodes to preserve position and velocity.
-        const old = new Map(node.data().map((d: any) => [d.id, d]));
-        nodes = nodes.map((d: any) => Object.assign(old.get(d.id) || {}, d));
-        links = links.map((d: any) => Object.assign({}, d));
+        const old = new Map(node.data().map((d: Node) => [d.id, d]));
+        nodes = nodes.map((d: Node) => Object.assign(old.get(d.id) || {}, d));
+        links = links.map((d: Connection) => Object.assign({}, d));
 
         node = node
-          .data(nodes, (d: any) => d.id)
+          .data(nodes, (d: Node) => String(d.id))
           .join((enter) =>
             enter
               .append("circle")
+              // radius
               .attr("r", 5)
               // .call(drag(simulation))
-              .call((node) => node.append("title").text((d: any) => d.id))
+              .call((node) =>
+                node.append("title").text((d: Node) => String(d.id))
+              )
           );
 
         link = link
-          .data(links, (d: any): any => [d.source, d.target])
-          .join("line");
+          .data(links, (d: Connection) => String([d.source, d.target]))
+          .join<SVGSVGElement, Connection>("line");
 
-        simulation.nodes(nodes);
-        simulation.force<ForceLink<any, any>>("link")?.links(links);
+        simulation.nodes(nodes as any[]);
+        simulation.force<ForceLink<Node, Connection>>("link")?.links(links);
         simulation.alpha(1).restart().tick();
         ticked(); // render now!
       },
     });
 
-    const contains = (
-      { start, end }: { start: number; end: number; id: string },
-      time: number | Date
-    ) => start - 2000 <= time && time < end + 2000;
+    const contains = ({ start, end }: Node | Connection, time: Date) => {
+      return start <= time.getTime() && time.getTime() < end;
+    };
 
     const times = d3
       .scaleTime()
       .domain([
-        d3.min(data.nodes, (d: any) => d.start),
-        d3.max(data.nodes, (d: any) => d.end),
+        d3.min(data.nodes, (d: Node) => d.start) as number,
+        d3.max(data.nodes, (d: Node) => d.end) as number,
       ])
       .ticks(100)
-      .filter((time) => data.nodes.some((d) => contains(d, time)));
+      .filter((time) => data.nodes.some((d: Node) => contains(d, time)));
 
     function update(time: Date) {
-      const nodes = data.nodes.filter((d: any) => contains(d, time));
-      const links = data.links.filter((d: any) => contains(d, time));
-      (chart as any).update({ nodes, links });
+      const nodes = data.nodes.filter((d: Node) => contains(d, time));
+      const links = data.links.filter((d: Connection) => contains(d, time));
+      chart.update({ nodes, links });
     }
 
     let i = 0;
@@ -168,13 +186,13 @@ function GraphChart() {
       if (i >= times.length) {
         i = 0;
       }
-      update(times[i++]);
+      update(times[i]);
 
       setTimeout(doUpdate, 500);
     }
 
     doUpdate();
-  }, []);
+  });
 
   return <SvgContainer ref={svgRef} width={svgWidth} height={svgHeight} />;
 }
