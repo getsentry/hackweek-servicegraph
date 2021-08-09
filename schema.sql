@@ -4,11 +4,11 @@ CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     id UUID,
     service_name LowCardinality(String),
     -- transaction is optional, empty string means none
-    transaction LowCardinality(String),
+    transaction_name LowCardinality(String),
     description String,
     timestamp DateTime
 ) ENGINE = ReplacingMergeTree()
-ORDER BY (service_name, transaction, id);
+ORDER BY (service_name, transaction_name, id);
 
 CREATE TABLE IF NOT EXISTS servicegraph.connections (
     -- the timestamp of the checkin
