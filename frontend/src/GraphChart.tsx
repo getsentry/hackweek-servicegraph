@@ -75,108 +75,6 @@ function GraphChart() {
       return;
     }
 
-    const simulation = d3
-      .forceSimulation()
-      .force("charge", d3.forceManyBody())
-      .force(
-        "link",
-        d3.forceLink<Node, Connection>().id((d: Node) => {
-          return String(d.id);
-        })
-      )
-      .force("x", d3.forceX())
-      .force("y", d3.forceY())
-      .on("tick", ticked);
-
-    const svg = d3
-      .select(svgRef.current)
-      .attr(
-        "viewBox",
-        [-svgWidth / 2, -svgHeight / 2, svgWidth, svgHeight]
-          .map(String)
-          .join(" ")
-      );
-
-    // Clear svg content before adding new elements
-    svg.selectAll("*").remove();
-
-    let link = svg
-      .append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
-      .selectAll<SVGSVGElement, Connection>("line");
-
-    let node = svg
-      .append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5)
-      .selectAll<SVGCircleElement, Node>("circle");
-
-    function ticked() {
-      node
-        .attr("cx", (d: Node) => {
-          // console.log("d", d);
-          return d.x ?? 0;
-        })
-        .attr("cy", (d: Node) => d.y ?? 0);
-
-      link
-        .attr("x1", (d: Connection) => (d.source as Node).x ?? 0)
-        .attr("y1", (d: Connection) => (d.source as Node).y ?? 0)
-        .attr("x2", (d: Connection) => (d.target as Node).x ?? 0)
-        .attr("y2", (d: Connection) => (d.target as Node).y ?? 0);
-    }
-
-    const chart: d3.BaseType & {
-      update({ nodes, links }: { nodes: Node[]; links: Connection[] }): void;
-    } = Object.assign(svg.node(), {
-      update({ nodes, links }: { nodes: Node[]; links: Connection[] }) {
-        // Make a shallow copy to protect against mutation, while
-        // recycling old nodes to preserve position and velocity.
-        const old = new Map(node.data().map((d: Node) => [d.id, d]));
-        nodes = nodes.map((d: Node) => Object.assign(old.get(d.id) || {}, d));
-        links = links.map((d: Connection) => Object.assign({}, d));
-
-        // https://stackoverflow.com/a/57037786
-        const setOfNodeIds = nodes.reduce((acc: Set<string>, d: Node) => {
-          acc.add(d.id);
-          return acc;
-        }, new Set());
-        const domain = Array.from(new Set(setOfNodeIds));
-
-        node = node
-          .data(nodes, (d: Node) => String(d.id))
-          .join((enter) =>
-            enter
-              .append("circle")
-              // radius
-              .attr("r", 5)
-              // .call(drag(simulation))
-              .call((node) => {
-                return node
-                  .attr("fill", (d: Node) => {
-                    const index = domain.indexOf(d.id);
-                    if (index >= 0) {
-                      return d3.interpolateSinebow(index / domain.length);
-                    }
-                    return "#000";
-                  })
-                  .append("title")
-                  .text((d: Node) => String(d.id));
-              })
-          );
-
-        link = link
-          .data(links, (d: Connection) => String([d.source, d.target]))
-          .join<SVGSVGElement, Connection>("line");
-
-        simulation.nodes(nodes as any[]);
-        simulation.force<ForceLink<Node, Connection>>("link")?.links(links);
-        simulation.alpha(1).restart().tick();
-        ticked(); // render now!
-      },
-    });
-
     const contains = ({ start, end }: Node | Connection, time: Date) => {
       return start <= time.getTime() && time.getTime() < end;
     };
@@ -190,30 +88,88 @@ function GraphChart() {
       .ticks(100)
       .filter((time) => data.nodes.some((d: Node) => contains(d, time)));
 
-    function update(time: Date) {
-      const nodes = data.nodes.filter((d: Node) => contains(d, time));
-      const links = data.links.filter((d: Connection) => contains(d, time));
-      chart.update({ nodes, links });
-    }
+    const time = times[0];
+    const links = data.links
+      .map((d) => Object.create(d))
+      .filter((d: Connection) => contains(d, time));
+    const nodes = data.nodes
+      .map((d) => Object.create(d))
+      .filter((d: Node) => contains(d, time));
 
-    let i = 0;
-    let timeoutID: NodeJS.Timeout | undefined = undefined;
+    // https://stackoverflow.com/a/57037786
+    const setOfNodeIds = nodes.reduce((acc: Set<string>, d: Node) => {
+      acc.add(d.id);
+      return acc;
+    }, new Set());
+    const domain = Array.from(new Set(setOfNodeIds));
 
-    function doUpdate() {
-      if (i >= times.length) {
-        i = 0;
-      }
-      update(times[i]);
+    const simulation = d3
+      .forceSimulation(nodes)
+      .force(
+        "link",
+        d3.forceLink<Node, Connection>(links).id((d) => d.id)
+      )
+      .force("charge", d3.forceManyBody())
+      .force("x", d3.forceX())
+      .force("y", d3.forceY())
+      .force("center", d3.forceCenter(svgWidth / 2, svgHeight / 2));
 
-      // timeoutID = setTimeout(doUpdate, 1000);
-    }
+    const svg = d3
+      .select(svgRef.current)
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
 
-    doUpdate();
+    // Clear svg content before adding new elements
+    svg.selectAll("*").remove();
+
+    const link = svg
+      .append("g")
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.6)
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke-width", (d) => Math.sqrt(d.value));
+
+    const node = svg
+      .append("g")
+      .selectAll(".node")
+      .data(nodes)
+      .join("g")
+      .attr("class", "node");
+
+    node
+      .append("circle")
+      .attr("r", 5)
+      .attr("fill", (d) => {
+        const index = domain.indexOf(d.id);
+        if (index >= 0) {
+          return d3.interpolateSinebow(index / domain.length);
+        }
+        return "#000";
+      });
+
+    node
+      .append("text")
+      .text(function (d) {
+        return d.id;
+      })
+      .style("fill", "#000")
+      .style("font-size", "12px")
+      .attr("x", 6)
+      .attr("y", 3);
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+
+      node.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+    });
 
     return () => {
-      if (timeoutID) {
-        clearTimeout(timeoutID);
-      }
+      simulation.stop();
     };
   });
 
