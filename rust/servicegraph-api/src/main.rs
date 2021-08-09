@@ -1,6 +1,7 @@
 mod payloads;
 
 #[macro_use] extern crate rocket;
+mod db;
 
 use std::collections::HashMap;
 use std::borrow::Cow;
