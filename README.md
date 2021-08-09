@@ -59,16 +59,25 @@ Content-Type: application/json
   "host": {
     "hostname": "self reported host name",
     "ip": "locally observed ip address",
-    "port": "locally observed port if available",
     "type": "what type of host am I",
-    "description": "human readable description"
+    "description": "human readable description",
+    "id": "<host_id>", # optional host id obtained from previous calls, the registrar is encouraged but is not required to retain the id 
   }
 }
 ```
 
 The response is the registered node ID. From now on responses from this service
-should pass the node ID around. For instance via HTTP the `x-servicegraph-node-id`
+should pass the node ID around. For instance via HTTP the `x-servicegraph-host-node-id`
 header shall be used.
+
+The response format is:
+```json
+{
+  "id": "8a20e955ede44c2f81e4798f37e0d9e1"
+}
+```
+where `id` is an uuid without any dashes ("-").
+
 
 ### Service Registration
 
@@ -86,12 +95,13 @@ Content-Type: application/json
     "host_node_id": "node-id of the host we're running on",
     "type": "what type of service am i",
     "description": "human readable description"
+    "id": "<service_id>", # optional service id obtained from previous calls,  the registrar is encouraged but is not required to retain the id 
   }
 }
 ```
 
 The response is the registered node ID. From now on responses from this service
-should pass the node ID around. For instance via HTTP the `x-servicegraph-node-id`
+should pass the node ID around. For instance via HTTP the `x-servicegraph-service-node-id`
 header shall be used.
 
 For this to work the host needs to be registered first. For this to work something
