@@ -62,6 +62,7 @@ Content-Type: application/json
     "type": "what type of host am I",
     "description": "human readable description",
     "id": "<host_id>", # optional host id obtained from previous calls, the registrar is encouraged but is not required to retain the id
+    "project_id": "The id of the project (a la sentry)",
   }
 }
 ```
@@ -88,6 +89,7 @@ Content-Type: application/json
     "type": "what type of service am i",
     "description": "human readable description"
     "id": "<service_id>", # optional service id obtained from previous calls,  the registrar is encouraged but is not required to retain the id
+    "project_id": "The id of the project (a la sentry)",
   }
 }
 ```
