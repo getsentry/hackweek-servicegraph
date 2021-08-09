@@ -27,6 +27,7 @@ pub struct ConnectionInfo {
 pub struct NodeInfo {
     pub name: String,
     pub description: String,
+    pub transaction: String,
     pub uuid: NodeUuid,
 }
 

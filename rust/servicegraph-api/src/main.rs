@@ -59,6 +59,7 @@ fn get_graph(project_id: u64) -> Json<payloads::GraphPayload> {
         String::from(nodes[0]),
         payloads::NodeInfo {
             name: String::from("ServiceA"),
+            transaction: String::from(""),
             description: String::from("root service"),
             uuid: String::from(nodes[0]),
         },
@@ -67,6 +68,7 @@ fn get_graph(project_id: u64) -> Json<payloads::GraphPayload> {
         String::from(nodes[1]),
         payloads::NodeInfo {
             name: String::from("ServiceB"),
+            transaction: String::from(""),
             description: String::from("dependent service"),
             uuid: String::from(nodes[1]),
         },
@@ -75,6 +77,7 @@ fn get_graph(project_id: u64) -> Json<payloads::GraphPayload> {
         String::from(nodes[2]),
         payloads::NodeInfo {
             name: String::from("ServiceC"),
+            transaction: String::from(""),
             description: String::from("other service"),
             uuid: String::from(nodes[2]),
         },
