@@ -5,6 +5,7 @@ CREATE DATABASE IF NOT EXISTS servicegraph;
 CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     id UUID,
     service_name String,
+    description String,
     timestamp DateTime
 ) ENGINE = ReplacingMergeTree()
 ORDER BY (id, timestamp);

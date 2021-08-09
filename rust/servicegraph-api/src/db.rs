@@ -1,11 +1,13 @@
 use clickhouse::{error::Result, Client, Row};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::payloads;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
 struct Node {
     id: [u8; 16],
     service_name: String,
+    description: String
 }
 
 fn get_connection() -> Client {
@@ -14,19 +16,25 @@ fn get_connection() -> Client {
         .with_database("servicegraph")
 }
 
-async fn register_node(connection: Client, node: Node) -> Result<()> {
+async fn register_node(connection: Client, node: payloads::NodeInfo) -> Result<()> {
+    let row = Node{
+        id: *Uuid::parse_str(&node.uuid).unwrap().as_bytes(),
+        service_name: node.name,
+        description: node.description,
+    };
     let mut insert = connection.insert("nodes")?;
-    insert.write(&node).await?;
+    insert.write(&row).await?;
     insert.end().await
 }
 
 #[tokio::test]
 async fn test_register_node() {
-    let client = get_connection();
-    let uuid = *Uuid::parse_str(&"a".repeat(32)).unwrap().as_bytes();
-    let node = Node {
-        id: uuid,
-        service_name: "test-service".to_string(),
+    let node = payloads::NodeInfo{
+        name: String::from("ServiceA"),
+        description: String::from("a service"),
+        uuid: String::from("418f3d00-ba14-42eb-98b8-5f3fb1b975c8")
     };
+
+    let client = get_connection();
     register_node(client, node).await.unwrap();
 }
