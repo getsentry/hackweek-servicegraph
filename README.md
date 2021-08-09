@@ -40,6 +40,11 @@ Nodes need to know who they are. As per policy host and service level nodes
 need to be registered, transactions should not be. That's because transactions
 look the same for both sides of a connection, but services and hosts do not.
 
+At the moment the system only describes registered nodes. That means only
+connections between nodes are permissible that first registered themselves
+under `/identify`. Most importantly this means you cannot yet describe
+connections to external services.
+
 ### Host Registration
 
 When a host first reports it needs to know its ID. For this it registers
@@ -88,6 +93,10 @@ Content-Type: application/json
 The response is the registered node ID. From now on responses from this service
 should pass the node ID around. For instance via HTTP the `x-servicegraph-node-id`
 header shall be used.
+
+For this to work the host needs to be registered first. For this to work something
+on the host first needs to register it and then pass the host to the service
+by using the `SERVICEGRAPH_HOST_NODE_ID` environment variable.
 
 ## Node Descriptors
 
