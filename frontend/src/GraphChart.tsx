@@ -181,6 +181,7 @@ function GraphChart() {
     }
 
     let i = 0;
+    let timeoutID: NodeJS.Timeout | undefined = undefined;
 
     function doUpdate() {
       if (i >= times.length) {
@@ -188,10 +189,16 @@ function GraphChart() {
       }
       update(times[i]);
 
-      setTimeout(doUpdate, 500);
+      timeoutID = setTimeout(doUpdate, 1000);
     }
 
     doUpdate();
+
+    return () => {
+      if (timeoutID) {
+        clearTimeout(timeoutID);
+      }
+    };
   });
 
   return <SvgContainer ref={svgRef} width={svgWidth} height={svgHeight} />;
