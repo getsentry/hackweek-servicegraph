@@ -42,3 +42,23 @@ CREATE TABLE IF NOT EXISTS servicegraph.connections (
 ) ENGINE = MergeTree()
 PARTITION BY (toYYYYMMDD(checkin_time), src_scope)
 ORDER BY checkin_time;
+
+CREATE TABLE IF NOT EXISTS servicegraph.connections_by_minute (
+    -- timestamp bucketed by minute
+    checkin_time DateTime,
+    src_scope UUID,
+    dst_scope UUID,
+    n UInt32
+) ENGINE = SummingMergeTree()
+ORDER BY checkin_time;
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS servicegraph.connections_by_minute_mv TO servicegraph.connections_by_minute (
+    checkin_time DateTime,
+    src_scope UUID,
+    dst_scope UUID,
+    n UInt32
+)
+AS SELECT toStartOfMinute(checkin_time) AS checkin_time, src_scope, dst_scope, sum(op_n) as n
+FROM servicegraph.connections
+GROUP BY src_scope, dst_scope, checkin_time;

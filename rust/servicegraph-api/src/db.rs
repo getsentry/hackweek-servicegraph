@@ -17,6 +17,7 @@ struct Connections {
     checkin_time: u32,
     src_scope: [u8; 16],
     dst_scope: [u8; 16],
+    op_n: u32
 }
 
 async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> {
@@ -31,7 +32,7 @@ async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> 
     insert.end().await
 }
 
-async fn insert_connections(client: &Client, src: &str, dst: &str) -> Result<()> {
+async fn insert_connections(client: &Client, src: &str, dst: &str, n: u32) -> Result<()> {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -40,6 +41,7 @@ async fn insert_connections(client: &Client, src: &str, dst: &str) -> Result<()>
         checkin_time: now,
         src_scope: uuid_to_bytes(src),
         dst_scope: uuid_to_bytes(dst),
+        op_n: n,
     };
     let mut insert = client.insert("connections")?;
     insert.write(&row).await?;
@@ -82,5 +84,5 @@ async fn test_insert_connections() {
     let client = get_client();
     let src = "418f3d00-ba14-42eb-98b8-5f3fb1b975c8";
     let dst = "5042546b-07a0-41d4-a73c-9138722eebb4";
-    insert_connections(&client, src, dst).await.unwrap();
+    insert_connections(&client, src, dst, 20).await.unwrap();
 }
