@@ -42,50 +42,51 @@ static nodes: [&str; 4] = [
 fn get_graph(project_id: u64) -> Json<payloads::GraphPayload> {
     let mut adjacency_map = HashMap::new();
     adjacency_map.insert(
-        String::from(nodes[0]),
+        nodes[0].parse().unwrap(),
         vec![
             payloads::ConnectionInfo {
-                to_node: String::from(nodes[1]),
+                to_node: nodes[1].parse().unwrap(),
                 hitcount: 12,
             },
             payloads::ConnectionInfo {
-                to_node: String::from(nodes[2]),
+                to_node: nodes[2].parse().unwrap(),
                 hitcount: 420,
             },
         ],
     );
     let mut metadata = HashMap::new();
     metadata.insert(
-        String::from(nodes[0]),
+        nodes[0].parse().unwrap(),
         payloads::NodeInfo {
             name: String::from("ServiceA"),
             transaction: String::from(""),
             description: String::from("root service"),
-            uuid: String::from(nodes[0]),
+            uuid: nodes[0].parse().unwrap(),
         },
     );
     metadata.insert(
-        String::from(nodes[1]),
+        nodes[1].parse().unwrap(),
         payloads::NodeInfo {
             name: String::from("ServiceB"),
             transaction: String::from(""),
             description: String::from("dependent service"),
-            uuid: String::from(nodes[1]),
+            uuid: nodes[1].parse().unwrap(),
         },
     );
     metadata.insert(
-        String::from(nodes[2]),
+        nodes[2].parse().unwrap(),
         payloads::NodeInfo {
             name: String::from("ServiceC"),
             transaction: String::from(""),
             description: String::from("other service"),
-            uuid: String::from(nodes[2]),
+            uuid: nodes[2].parse().unwrap(),
         },
     );
-    return Json(payloads::GraphPayload {
+
+    Json(payloads::GraphPayload {
         adjacency_map,
         metadata,
-    });
+    })
 }
 
 #[launch]

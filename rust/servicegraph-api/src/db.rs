@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
 struct Node {
-    id: [u8; 16],
+    id: Uuid,
     service_name: String,
     transaction_name: String,
     description: String,
@@ -14,15 +14,15 @@ struct Node {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
 struct Connections {
-    checkin_time: u32,
-    src_scope: [u8; 16],
-    dst_scope: [u8; 16],
-    op_n: u32
+    checkin_time: u64,
+    src_scope: Uuid,
+    dst_scope: Uuid,
+    op_n: u32,
 }
 
 async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> {
     let row = Node {
-        id: uuid_to_bytes(&node.uuid),
+        id: node.uuid,
         service_name: node.name,
         transaction_name: node.transaction,
         description: node.description,
@@ -32,15 +32,15 @@ async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> 
     insert.end().await
 }
 
-async fn insert_connections(client: &Client, src: &str, dst: &str, n: u32) -> Result<()> {
+async fn insert_connections(client: &Client, src: Uuid, dst: Uuid, n: u32) -> Result<()> {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
-        .as_secs() as u32; // TODO: Hardcoded for now
+        .as_secs();
     let row = Connections {
         checkin_time: now,
-        src_scope: uuid_to_bytes(src),
-        dst_scope: uuid_to_bytes(dst),
+        src_scope: src,
+        dst_scope: dst,
         op_n: n,
     };
     let mut insert = client.insert("connections")?;
@@ -52,10 +52,6 @@ fn get_client() -> Client {
     Client::default()
         .with_url("http://localhost:8123")
         .with_database("servicegraph")
-}
-
-fn uuid_to_bytes(uuid_str: &str) -> [u8; 16] {
-    *Uuid::parse_str(uuid_str).unwrap().as_bytes()
 }
 
 #[tokio::test]
