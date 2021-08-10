@@ -19,6 +19,10 @@ schema:
 	@$(CLICKHOUSE_SHELL) -n --query "$$(cat schema.sql)"
 .PHONY: schema
 
+drop:
+	@$(CLICKHOUSE_SHELL) -n --query "drop database servicegraph"
+.PHONY: drop
+
 clickhouse-shell:
 	@$(CLICKHOUSE_SHELL) -d servicegraph
 .PHONY: clickhouse-shell

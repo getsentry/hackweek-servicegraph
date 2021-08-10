@@ -40,47 +40,47 @@ static nodes: [&str; 4] = [
 #[get("/graph/<project_id>")]
 fn get_graph(project_id: u64) -> Json<payloads::GraphPayload> {
     let mut adjacency_map = HashMap::new();
-    adjacency_map.insert(
-        nodes[0].parse().unwrap(),
-        vec![
-            payloads::ConnectionInfo {
-                to_node: nodes[1].parse().unwrap(),
-                hitcount: 12,
-            },
-            payloads::ConnectionInfo {
-                to_node: nodes[2].parse().unwrap(),
-                hitcount: 420,
-            },
-        ],
-    );
+    //adjacency_map.insert(
+    //    nodes[0].parse().unwrap(),
+    //    vec![
+    //        payloads::ConnectionInfo {
+    //            to_node: nodes[1].parse().unwrap(),
+    //            hitcount: 12,
+    //        },
+    //        payloads::ConnectionInfo {
+    //            to_node: nodes[2].parse().unwrap(),
+    //            hitcount: 420,
+    //        },
+    //    ],
+    //);
     let mut metadata = HashMap::new();
-    metadata.insert(
-        nodes[0].parse().unwrap(),
-        payloads::NodeInfo {
-            name: String::from("ServiceA"),
-            transaction: String::from(""),
-            description: String::from("root service"),
-            uuid: nodes[0].parse().unwrap(),
-        },
-    );
-    metadata.insert(
-        nodes[1].parse().unwrap(),
-        payloads::NodeInfo {
-            name: String::from("ServiceB"),
-            transaction: String::from(""),
-            description: String::from("dependent service"),
-            uuid: nodes[1].parse().unwrap(),
-        },
-    );
-    metadata.insert(
-        nodes[2].parse().unwrap(),
-        payloads::NodeInfo {
-            name: String::from("ServiceC"),
-            transaction: String::from(""),
-            description: String::from("other service"),
-            uuid: nodes[2].parse().unwrap(),
-        },
-    );
+    //metadata.insert(
+    //    nodes[0].parse().unwrap(),
+    //    payloads::NodeInfo {
+    //        name: String::from("ServiceA"),
+    //        transaction: String::from(""),
+    //        description: String::from("root service"),
+    //        uuid: nodes[0].parse().unwrap(),
+    //    },
+    //);
+    //metadata.insert(
+    //    nodes[1].parse().unwrap(),
+    //    payloads::NodeInfo {
+    //        name: String::from("ServiceB"),
+    //        transaction: String::from(""),
+    //        description: String::from("dependent service"),
+    //        uuid: nodes[1].parse().unwrap(),
+    //    },
+    //);
+    //metadata.insert(
+    //    nodes[2].parse().unwrap(),
+    //    payloads::NodeInfo {
+    //        name: String::from("ServiceC"),
+    //        transaction: String::from(""),
+    //        description: String::from("other service"),
+    //        uuid: nodes[2].parse().unwrap(),
+    //    },
+    //);
 
     Json(payloads::GraphPayload {
         adjacency_map,

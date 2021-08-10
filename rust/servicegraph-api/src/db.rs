@@ -1,89 +1,118 @@
-use crate::payloads;
-use clickhouse::{error::Result, Client, Row};
-use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
-use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
+use clickhouse_rs::{Block, ClientHandle, Pool};
+use lazy_static::lazy_static;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
-struct Node {
-    id: [u8; 16],
-    service_name: String,
-    transaction_name: String,
-    description: String,
+use crate::payloads::{Edge, Node};
+
+lazy_static! {
+    static ref CLICKHOUSE_POOL: Pool =
+        Pool::new("tcp://localhost:9000/servicegraph?compression=lz4");
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
-struct Connections {
-    checkin_time: u32,
-    from_node_id: [u8; 16],
-    to_node_id: [u8; 16],
-    n: u32,
+async fn register_nodes(mut client: ClientHandle, nodes: &[Node]) -> anyhow::Result<()> {
+    let now = Utc::now().with_timezone(&Tz::UTC);
+    let block = Block::new()
+        .column(
+            "node_id",
+            nodes.iter().map(|x| x.node_id).collect::<Vec<_>>(),
+        )
+        .column(
+            "node_type",
+            nodes
+                .iter()
+                .map(|x| x.node_type.as_u8())
+                .collect::<Vec<_>>(),
+        )
+        .column(
+            "name",
+            nodes.iter().map(|x| x.name.clone()).collect::<Vec<_>>(),
+        )
+        .column("timestamp", vec![now; nodes.len()]);
+    client.insert("nodes", block).await?;
+    Ok(())
 }
 
-async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> {
-    let row = Node {
-        id: *node.uuid.as_bytes(),
-        service_name: node.name,
-        transaction_name: node.transaction,
-        description: node.description,
-    };
-    let mut insert = client.insert("nodes")?;
-    insert.write(&row).await?;
-    insert.end().await
+async fn register_edges(mut client: ClientHandle, edges: &[Edge]) -> anyhow::Result<()> {
+    let block = Block::new()
+        .column(
+            "checkin_time",
+            edges
+                .iter()
+                .map(|x| x.checkin_time.with_timezone(&Tz::UTC))
+                .collect::<Vec<_>>(),
+        )
+        .column(
+            "from_node_id",
+            edges.iter().map(|x| x.from_node_id).collect::<Vec<_>>(),
+        )
+        .column(
+            "to_node_id",
+            edges.iter().map(|x| x.to_node_id).collect::<Vec<_>>(),
+        )
+        .column(
+            "status",
+            edges.iter().map(|x| x.status.as_u8()).collect::<Vec<_>>(),
+        )
+        .column("n", edges.iter().map(|x| x.n).collect::<Vec<_>>());
+    client.insert("edges", block).await?;
+    Ok(())
 }
 
-async fn insert_connections(
-    client: &Client,
-    from_node_id: Uuid,
-    to_node_id: Uuid,
-    n: u32,
-) -> Result<()> {
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let row = Connections {
-        checkin_time: now as u32,
-        from_node_id: *from_node_id.as_bytes(),
-        to_node_id: *to_node_id.as_bytes(),
-        n,
-    };
-    let mut insert = client.insert("connections")?;
-    insert.write(&row).await?;
-    insert.end().await
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::payloads::{EdgeStatus, NodeType};
+    use uuid::Uuid;
 
-fn get_client() -> Client {
-    Client::default()
-        .with_url("http://localhost:8123")
-        .with_database("servicegraph")
-}
+    #[tokio::test]
+    async fn test_register_node() {
+        let node_one = Node {
+            node_id: Uuid::new_v4(),
+            node_type: NodeType::Service,
+            name: String::from("service_a"),
+        };
 
-#[tokio::test]
-async fn test_register_node() {
-    let node_one = payloads::NodeInfo {
-        name: String::from("ServiceA"),
-        transaction: String::from(""),
-        description: String::from("a service"),
-        uuid: "418f3d00-ba14-42eb-98b8-5f3fb1b975c8".parse().unwrap(),
-    };
+        let node_two = Node {
+            node_id: Uuid::new_v4(),
+            node_type: NodeType::Service,
+            name: String::from("service_b"),
+        };
 
-    let node_two = payloads::NodeInfo {
-        name: String::from("ServiceB"),
-        transaction: String::from(""),
-        description: String::from("another service"),
-        uuid: "5042546b-07a0-41d4-a73c-9138722eebb4".parse().unwrap(),
-    };
+        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
+        register_nodes(client, &vec![node_one, node_two])
+            .await
+            .unwrap();
+    }
 
-    let client = get_client();
-    register_node(&client, node_one).await.unwrap();
-    register_node(&client, node_two).await.unwrap();
-}
+    #[tokio::test]
+    async fn test_insert_connections() {
+        let node_one = Node {
+            node_id: Uuid::new_v4(),
+            node_type: NodeType::Service,
+            name: String::from("service_a"),
+        };
 
-#[tokio::test]
-async fn test_insert_connections() {
-    let client = get_client();
-    let src = "418f3d00-ba14-42eb-98b8-5f3fb1b975c8".parse().unwrap();
-    let dst = "5042546b-07a0-41d4-a73c-9138722eebb4".parse().unwrap();
-    insert_connections(&client, src, dst, 20).await.unwrap();
+        let node_two = Node {
+            node_id: Uuid::new_v4(),
+            node_type: NodeType::Service,
+            name: String::from("service_b"),
+        };
+
+        let edge = Edge {
+            checkin_time: Utc::now(),
+            from_node_id: node_one.node_id,
+            to_node_id: node_two.node_id,
+            status: EdgeStatus::Ok,
+            n: 1,
+        };
+
+        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
+        register_nodes(client, &vec![node_one, node_two])
+            .await
+            .unwrap();
+
+        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
+        register_edges(client, &vec![edge]).await.unwrap();
+    }
 }
