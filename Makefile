@@ -31,3 +31,4 @@ setup-venv: .venv/bin/python
 	@rm -rf .venv
 	@which virtualenv || sudo pip install virtualenv
 	virtualenv -p 3.6.10 .venv
+	pip install -r requirements.txt
