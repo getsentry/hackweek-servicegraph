@@ -6,6 +6,21 @@ import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
 
+type ServiceGraphNode = ReactD3Graph.GraphNode & Node;
+type ServiceGraphLink = ReactD3Graph.GraphLink & CombinedEdge;
+
+type DetailsPayload =
+  | {
+      type: "node";
+      payload: Node;
+    }
+  | {
+      type: "edge";
+      payload: CombinedEdge;
+      source: Node | undefined;
+      destination: Node | undefined;
+    };
+
 // the graph configuration, just override the ones you need
 const myConfig = {
   directed: true,
@@ -22,15 +37,8 @@ const myConfig = {
   link: {
     color: "#adb5bd",
     highlightColor: "#343a40",
+    strokeWidth: 1.5,
   },
-};
-
-const onClickNode = function (nodeId: string) {
-  console.log(`Clicked node ${nodeId}`);
-};
-
-const onClickLink = function (source: string, target: string) {
-  console.log(`Clicked link between ${source} and ${target}`);
 };
 
 function fetchServiceGraph(): Promise<Graph> {
@@ -38,9 +46,6 @@ function fetchServiceGraph(): Promise<Graph> {
     res.json()
   );
 }
-
-type ServiceGraphNode = ReactD3Graph.GraphNode & Node;
-type ServiceGraphLink = ReactD3Graph.GraphLink & CombinedEdge;
 
 // Convert service graph data into the format that d3 graph lib can consume
 function processServiceGraphData(
@@ -67,6 +72,9 @@ function processServiceGraphData(
 }
 
 function ServiceGraph() {
+  const [details, setDetails] = React.useState<DetailsPayload | undefined>(
+    undefined
+  );
   // Fetch service graph data
   //   const queryClient = useQueryClient();
   const { isLoading, error, data } = useQuery(
@@ -91,22 +99,118 @@ function ServiceGraph() {
     return <Container>No Service Graph Data.</Container>;
   }
 
+  const processedData = processServiceGraphData(data);
+
+  const fetchNodeById = (nodeId: string) => {
+    return processedData.nodes.find((node) => node.id === nodeId);
+  };
+
+  const onClickNode = function (nodeId: string) {
+    console.log(`Clicked node ${nodeId}`);
+
+    const results = fetchNodeById(nodeId);
+
+    if (!results) {
+      return;
+    }
+
+    setDetails({
+      type: "node",
+      payload: results,
+    });
+  };
+
+  const onClickLink = function (source: string, target: string) {
+    console.log(`Clicked link between ${source} and ${target}`);
+
+    const results = processedData.links.find(
+      (edge) => edge.source === source && edge.target === target
+    );
+
+    if (!results) {
+      return;
+    }
+
+    setDetails({
+      type: "edge",
+      payload: results,
+      source: fetchNodeById(results.from_node_id),
+      destination: fetchNodeById(results.to_node_id),
+    });
+  };
+
   return (
-    <Container>
-      <ReactD3Graph.Graph
-        key="service-graph"
-        id="service-graph"
-        data={processServiceGraphData(data)}
-        config={myConfig as any}
-        onClickNode={onClickNode}
-        onClickLink={onClickLink}
-      />
-    </Container>
+    <React.Fragment>
+      <Container>
+        <ReactD3Graph.Graph
+          key="service-graph"
+          id="service-graph"
+          data={processedData}
+          config={myConfig as any}
+          onClickNode={onClickNode}
+          onClickLink={onClickLink}
+        />
+      </Container>
+      <DetailsPanel>
+        <Details details={details} />
+      </DetailsPanel>
+    </React.Fragment>
+  );
+}
+
+function NodeDetails({ node }: { node: Node | undefined }) {
+  if (!node) {
+    return null;
+  }
+  return (
+    <div>
+      <div>Name: {node.name}</div>
+      <div>Node Id: {node.node_id}</div>
+      <div>Type: {node.node_type}</div>
+    </div>
+  );
+}
+
+function Details(props: { details: DetailsPayload | undefined }) {
+  const { details } = props;
+
+  if (!details) {
+    return (
+      <div>
+        <i>Click on a node or edge view its details.</i>
+      </div>
+    );
+  }
+
+  if (details.type === "node") {
+    const node = details.payload;
+    return <NodeDetails node={node} />;
+  }
+
+  const edge = details.payload;
+  const { source, destination } = details;
+  return (
+    <div className="grid grid-cols-1">
+      <strong>Source</strong>
+      <NodeDetails node={source} />
+      <hr />
+      <strong>Destination</strong>
+      <NodeDetails node={destination} />
+      <hr />
+      <div>Status: {edge.status_ok}</div>
+      <div>Expected Error: {edge.status_expected_error}</div>
+      <div>Unexpected Error: {edge.status_unexpected_error}</div>
+    </div>
   );
 }
 
 const Container = styled.div`
-  ${tw`border rounded border-solid border-gray-500`};
+  ${tw`rounded shadow-lg bg-white`};
+`;
+
+const DetailsPanel = styled.div`
+  width: 800px;
+  ${tw`rounded bg-white mt-4 p-4`};
 `;
 
 export default ServiceGraph;

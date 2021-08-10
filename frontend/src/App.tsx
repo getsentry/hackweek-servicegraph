@@ -12,7 +12,7 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <main className="container mx-auto flex flex-col min-h-screen justify-center items-center">
+        <main className="container mx-auto flex flex-col min-h-screen pt-4 items-center">
           <ServiceGraph />
         </main>
         <ReactQueryDevtools />
