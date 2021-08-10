@@ -7,6 +7,7 @@ use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
 use uuid::Uuid;
 
+use crate::error::Error;
 use crate::payloads::{CombinedEdge, Edge, Graph, Node, NodeType};
 
 lazy_static! {
@@ -14,7 +15,7 @@ lazy_static! {
         Pool::new("tcp://localhost:9000/servicegraph?compression=lz4");
 }
 
-pub async fn get_client() -> Result<ClientHandle, anyhow::Error> {
+pub async fn get_client() -> Result<ClientHandle, Error> {
     Ok(CLICKHOUSE_POOL.get_handle().await?)
 }
 
@@ -22,7 +23,7 @@ pub async fn register_nodes(
     client: &mut ClientHandle,
     project_id: u64,
     nodes: &[Node],
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     let now = Utc::now().with_timezone(&Tz::UTC);
     let block = Block::new()
         .column("project_id", vec![project_id; nodes.len()])
@@ -50,7 +51,7 @@ pub async fn register_edges(
     client: &mut ClientHandle,
     project_id: u64,
     edges: &[Edge],
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     let block = Block::new()
         .column("project_id", vec![project_id; edges.len()])
         .column(
@@ -82,7 +83,7 @@ pub async fn query_graph(
     project_id: u64,
     start_date: Option<DateTime<Utc>>,
     end_date: Option<DateTime<Utc>>,
-) -> Result<Graph, anyhow::Error> {
+) -> Result<Graph, Error> {
     let start_date_bound = match start_date {
         Some(s) => s,
         None => Utc::now() - Duration::hours(1),
