@@ -1,10 +1,10 @@
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
-use crate::db::get_client;
+use crate::db::{get_client, query_graph};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
-use crate::payloads::{Edge, Node};
+use crate::payloads::{Edge, Graph, Node};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubmitData {
@@ -23,4 +23,10 @@ pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
         register_edges(&mut client, data.project_id, &data.edges).await?;
     }
     Ok("".into())
+}
+
+#[get("/query?<project_id>")]
+pub async fn query(project_id: u64) -> Result<Json<Graph>, ApiError> {
+    let mut client = get_client().await?;
+    Ok(Json(query_graph(&mut client, project_id).await?))
 }

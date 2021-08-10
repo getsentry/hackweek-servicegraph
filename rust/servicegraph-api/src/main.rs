@@ -8,5 +8,5 @@ mod error;
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![endpoints::submit])
+    rocket::build().mount("/", routes![endpoints::submit, endpoints::query])
 }

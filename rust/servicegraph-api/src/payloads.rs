@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -30,6 +29,15 @@ pub struct Edge {
     pub n: u32,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CombinedEdge {
+    pub from_node_id: Uuid,
+    pub to_node_id: Uuid,
+    pub status_ok: u32,
+    pub status_expected_error: u32,
+    pub status_unexpected_error: u32,
+}
+
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeType {
@@ -44,6 +52,13 @@ impl NodeType {
             NodeType::Transaction => 2,
         }
     }
+
+    pub fn from_u8(value: u8) -> NodeType {
+        match value {
+            2 => NodeType::Transaction,
+            _ => NodeType::Service,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,8 +68,8 @@ pub struct Node {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct GraphPayload {
-    pub adjacency_map: HashMap<Uuid, Vec<Edge>>,
-    pub metadata: HashMap<Uuid, Node>,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Graph {
+    pub edges: Vec<CombinedEdge>,
+    pub nodes: Vec<Node>,
 }

@@ -12,6 +12,7 @@ pub struct ApiError {
 
 impl From<anyhow::Error> for ApiError {
     fn from(error: anyhow::Error) -> ApiError {
+        dbg!(&error);
         ApiError { error }
     }
 }

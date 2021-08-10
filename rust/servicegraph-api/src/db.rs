@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use chrono::Utc;
 use chrono_tz::Tz;
 use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
+use uuid::Uuid;
 
-use crate::payloads::{Edge, Node};
+use crate::payloads::{CombinedEdge, Edge, Graph, Node, NodeType};
 
 lazy_static! {
     static ref CLICKHOUSE_POOL: Pool =
@@ -71,6 +74,71 @@ pub async fn register_edges(
         .column("n", edges.iter().map(|x| x.n).collect::<Vec<_>>());
     client.insert("edges", block).await?;
     Ok(())
+}
+
+pub async fn query_graph(
+    client: &mut ClientHandle,
+    project_id: u64,
+) -> Result<Graph, anyhow::Error> {
+    let block = client
+        .query(&format!(
+            "
+        SELECT
+            edges.from_node_id from_node_id,
+            from_node.name as from_node_name,
+            from_node.node_type as from_node_type,
+            edges.to_node_id to_node_id,
+            to_node.name as to_node_name,
+            to_node.node_type as to_node_type,
+            edges.status_ok status_ok,
+            edges.status_expected_error status_expected_error,
+            edges.status_unexpected_error status_unexpected_error
+        FROM edges_by_minute_mv edges
+        JOIN nodes from_node
+          ON from_node.node_id = edges.from_node_id
+         AND from_node.project_id = edges.project_id
+        JOIN nodes to_node
+          ON to_node.node_id = edges.to_node_id
+         AND to_node.project_id = edges.project_id
+        WHERE edges.project_id = {}",
+            project_id
+        ))
+        .fetch_all()
+        .await?;
+
+    let mut edges = Vec::new();
+    let mut nodes: HashMap<Uuid, Node> = HashMap::new();
+
+    for row in block.rows() {
+        edges.push(CombinedEdge {
+            from_node_id: row.get("from_node_id")?,
+            to_node_id: row.get("to_node_id")?,
+            status_ok: row.get("status_ok")?,
+            status_expected_error: row.get("status_expected_error")?,
+            status_unexpected_error: row.get("status_unexpected_error")?,
+        });
+        nodes.insert(
+            row.get("from_node_id")?,
+            Node {
+                node_id: row.get("from_node_id")?,
+                node_type: NodeType::from_u8(row.get("from_node_type")?),
+                name: row.get("from_node_name")?,
+            },
+        );
+        nodes.insert(
+            row.get("to_node_id")?,
+            Node {
+                node_id: row.get("to_node_id")?,
+                node_type: NodeType::from_u8(row.get("to_node_type")?),
+                name: row.get("to_node_name")?,
+            },
+        );
+    }
+
+    Ok(Graph {
+        edges,
+        nodes: nodes.into_values().collect(),
+    })
 }
 
 #[cfg(test)]

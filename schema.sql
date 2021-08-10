@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS servicegraph.edges_by_minute (
     checkin_time DateTime,
     from_node_id UUID,
     to_node_id UUID,
-    n UInt32
+    status_ok UInt32,
+    status_expected_error UInt32,
+    status_unexpected_error UInt32
 ) ENGINE = SummingMergeTree()
 ORDER BY checkin_time;
 
@@ -36,13 +38,17 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS servicegraph.edges_by_minute_mv TO servic
     checkin_time DateTime,
     from_node_id UUID,
     to_node_id UUID,
-    n UInt32
+    status_ok UInt32,
+    status_expected_error UInt32,
+    status_unexpected_error UInt32
 )
 AS SELECT
     project_id,
     toStartOfMinute(checkin_time) AS checkin_time,
     from_node_id,
     to_node_id,
-    sum(n) as n
+    sumIf(n, status = 1) as status_ok,
+    sumIf(n, status = 2) as status_expected_error,
+    sumIf(n, status = 3) as status_unexpected_error
 FROM servicegraph.edges
 GROUP BY project_id, from_node_id, to_node_id, checkin_time;
