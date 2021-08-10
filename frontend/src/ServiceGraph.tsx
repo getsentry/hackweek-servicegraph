@@ -6,14 +6,19 @@ import { Graph, Node, CombinedEdge } from "./types";
 
 // the graph configuration, just override the ones you need
 const myConfig = {
+  directed: true,
+  automaticRearrangeAfterDropNode: true,
   nodeHighlightBehavior: true,
   node: {
-    color: "lightgreen",
-    size: 120,
-    highlightStrokeColor: "blue",
+    color: "#82c91e",
+    size: 240,
+    highlightStrokeColor: "#2b8a3e",
+    labelProperty: "name",
+    fontColor: "black",
+    fontSize: 12,
   },
   link: {
-    highlightColor: "lightblue",
+    highlightColor: "#343a40",
   },
 };
 
@@ -89,7 +94,7 @@ function ServiceGraph() {
         key="service-graph"
         id="service-graph"
         data={processServiceGraphData(data)}
-        config={myConfig}
+        config={myConfig as any}
         onClickNode={onClickNode}
         onClickLink={onClickLink}
       />
