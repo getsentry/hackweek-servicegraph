@@ -5,6 +5,7 @@ import { useQuery } from "react-query";
 import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
+import useWindowSize from "./useWindowSize";
 
 type ServiceGraphNode = ReactD3Graph.GraphNode & Node;
 type ServiceGraphLink = ReactD3Graph.GraphLink & CombinedEdge;
@@ -90,6 +91,8 @@ function processServiceGraphData(
 }
 
 function ServiceGraph() {
+  const windowSize = useWindowSize();
+
   const [details, setDetails] = React.useState<DetailsPayload | undefined>(
     undefined
   );
@@ -168,7 +171,13 @@ function ServiceGraph() {
           key="service-graph"
           id="service-graph"
           data={processedData}
-          config={myConfig as any}
+          config={
+            {
+              ...myConfig,
+              width: Math.max(windowSize.width ?? 800, 800),
+              height: Math.max((windowSize.height ?? 400) - 200, 400),
+            } as any
+          }
           onClickNode={onClickNode}
           onClickLink={onClickLink}
         />
@@ -228,6 +237,10 @@ function Details(props: { details: DetailsPayload | undefined }) {
 
 const Container = styled.div`
   ${tw`rounded shadow-lg bg-white`};
+
+  & > div[id="service-graph-graph-wrapper"] > svg {
+    width: 100vw;
+  }
 `;
 
 const DetailsPanel = styled.div`
