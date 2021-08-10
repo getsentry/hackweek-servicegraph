@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
 struct Node {
-    id: Uuid,
+    id: [u8; 16],
     service_name: String,
     transaction_name: String,
     description: String,
@@ -14,15 +14,15 @@ struct Node {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Row)]
 struct Connections {
-    checkin_time: u64,
-    src_scope: Uuid,
-    dst_scope: Uuid,
-    op_n: u32,
+    checkin_time: u32,
+    from_node_id: [u8; 16],
+    to_node_id: [u8; 16],
+    n: u32,
 }
 
 async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> {
     let row = Node {
-        id: node.uuid,
+        id: *node.uuid.as_bytes(),
         service_name: node.name,
         transaction_name: node.transaction,
         description: node.description,
@@ -32,16 +32,21 @@ async fn register_node(client: &Client, node: payloads::NodeInfo) -> Result<()> 
     insert.end().await
 }
 
-async fn insert_connections(client: &Client, src: Uuid, dst: Uuid, n: u32) -> Result<()> {
+async fn insert_connections(
+    client: &Client,
+    from_node_id: Uuid,
+    to_node_id: Uuid,
+    n: u32,
+) -> Result<()> {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs();
     let row = Connections {
-        checkin_time: now,
-        src_scope: src,
-        dst_scope: dst,
-        op_n: n,
+        checkin_time: now as u32,
+        from_node_id: *from_node_id.as_bytes(),
+        to_node_id: *to_node_id.as_bytes(),
+        n,
     };
     let mut insert = client.insert("connections")?;
     insert.write(&row).await?;
@@ -60,14 +65,14 @@ async fn test_register_node() {
         name: String::from("ServiceA"),
         transaction: String::from(""),
         description: String::from("a service"),
-        uuid: String::from("418f3d00-ba14-42eb-98b8-5f3fb1b975c8"),
+        uuid: "418f3d00-ba14-42eb-98b8-5f3fb1b975c8".parse().unwrap(),
     };
 
     let node_two = payloads::NodeInfo {
         name: String::from("ServiceB"),
         transaction: String::from(""),
         description: String::from("another service"),
-        uuid: String::from("5042546b-07a0-41d4-a73c-9138722eebb4"),
+        uuid: "5042546b-07a0-41d4-a73c-9138722eebb4".parse().unwrap(),
     };
 
     let client = get_client();
@@ -78,7 +83,7 @@ async fn test_register_node() {
 #[tokio::test]
 async fn test_insert_connections() {
     let client = get_client();
-    let src = "418f3d00-ba14-42eb-98b8-5f3fb1b975c8";
-    let dst = "5042546b-07a0-41d4-a73c-9138722eebb4";
+    let src = "418f3d00-ba14-42eb-98b8-5f3fb1b975c8".parse().unwrap();
+    let dst = "5042546b-07a0-41d4-a73c-9138722eebb4".parse().unwrap();
     insert_connections(&client, src, dst, 20).await.unwrap();
 }
