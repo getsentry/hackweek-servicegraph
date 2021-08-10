@@ -5,12 +5,20 @@ use crate::db::{get_client, query_graph};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{Edge, Graph, Node};
+use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubmitData {
     project_id: u64,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct QueryParams {
+    project_id: u64,
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
 }
 
 #[post("/submit", format = "json", data = "<data>")]
@@ -25,8 +33,16 @@ pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
     Ok("".into())
 }
 
-#[get("/query?<project_id>")]
-pub async fn query(project_id: u64) -> Result<Json<Graph>, ApiError> {
+#[post("/query", format = "json", data = "<params>")]
+pub async fn query(params: Json<QueryParams>) -> Result<Json<Graph>, ApiError> {
     let mut client = get_client().await?;
-    Ok(Json(query_graph(&mut client, project_id).await?))
+    Ok(Json(
+        query_graph(
+            &mut client,
+            params.project_id,
+            params.start_date,
+            params.end_date,
+        )
+        .await?,
+    ))
 }

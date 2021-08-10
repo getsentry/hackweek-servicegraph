@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
+use chrono::{DateTime, Duration};
 use chrono_tz::Tz;
 use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
@@ -79,7 +80,17 @@ pub async fn register_edges(
 pub async fn query_graph(
     client: &mut ClientHandle,
     project_id: u64,
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
 ) -> Result<Graph, anyhow::Error> {
+    let start_date_bound = match start_date {
+        Some(s) => s,
+        None => Utc::now() - Duration::hours(1),
+    };
+    let end_date_bound = match end_date {
+        Some(s) => s,
+        None => Utc::now(),
+    };
     let block = client
         .query(&format!(
             "
@@ -102,8 +113,10 @@ pub async fn query_graph(
         JOIN nodes to_node
           ON to_node.node_id = edges.to_node_id
          AND to_node.project_id = edges.project_id
-        WHERE edges.project_id = {}",
-            project_id
+        WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')",
+            project_id,
+            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
         ))
         .fetch_all()
         .await?;
@@ -229,5 +242,18 @@ mod tests {
 
         let mut client = get_client().await.unwrap();
         register_edges(&mut client, 1, &edges).await.unwrap();
+        let results = query_graph(&mut client, 1, None, None).await.unwrap();
+        assert!(!results.edges.is_empty());
+        assert!(!results.nodes.is_empty());
+        let empty_results = query_graph(
+            &mut client,
+            1,
+            Some(Utc::now() - Duration::weeks(20)),
+            Some(Utc::now() - Duration::weeks(19)),
+        )
+        .await
+        .unwrap();
+        assert!(empty_results.edges.is_empty());
+        assert!(empty_results.nodes.is_empty());
     }
 }
