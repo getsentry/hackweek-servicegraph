@@ -123,27 +123,17 @@ pub async fn query_graph(
         .fetch_all()
         .await?;
 
-    let mut edges: HashMap<Uuid, CombinedEdge> = HashMap::new();
+    let mut edges = Vec::new();
     let mut nodes: HashMap<Uuid, Node> = HashMap::new();
 
     for row in block.rows() {
-        let new_edge = CombinedEdge {
+        edges.push(CombinedEdge {
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
             status_ok: row.get("status_ok")?,
             status_expected_error: row.get("status_expected_error")?,
             status_unexpected_error: row.get("status_unexpected_error")?,
-        };
-
-        // this is kinda shitty, ideally we can get this already merged from CH
-        edges
-            .entry(row.get("from_node_id")?)
-            .and_modify(|edge| {
-                edge.status_ok += new_edge.status_ok;
-                edge.status_expected_error += new_edge.status_expected_error;
-                edge.status_unexpected_error += new_edge.status_unexpected_error;
-            })
-            .or_insert(new_edge);
+        });
 
         nodes.insert(
             row.get("from_node_id")?,
@@ -166,7 +156,7 @@ pub async fn query_graph(
     }
 
     Ok(Graph {
-        edges: edges.into_values().collect(),
+        edges,
         nodes: nodes.into_values().collect(),
     })
 }
