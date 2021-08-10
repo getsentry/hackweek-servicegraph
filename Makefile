@@ -1,5 +1,7 @@
 COMPOSE_PROJECT_NAME=servicegraph
 CLICKHOUSE_SHELL=docker run --rm -it --net=host yandex/clickhouse-client:21.6 -h host.docker.internal
+export PYTHON_VERSION := python3
+
 
 up:
 	@docker compose -p "$(COMPOSE_PROJECT_NAME)" up -d
@@ -30,5 +32,5 @@ setup-venv: .venv/bin/python
 .venv/bin/python: Makefile
 	@rm -rf .venv
 	@which virtualenv || sudo pip install virtualenv
-	virtualenv -p 3.6.10 .venv
+	virtualenv -p $$PYTHON_VERSION .venv
 	pip install -r requirements.txt
