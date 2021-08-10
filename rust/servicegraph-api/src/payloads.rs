@@ -18,6 +18,14 @@ impl EdgeStatus {
             EdgeStatus::UnexpectedError => 3,
         }
     }
+
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            1 => EdgeStatus::Ok,
+            2 => EdgeStatus::ExpectedError,
+            _ => EdgeStatus::UnexpectedError,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

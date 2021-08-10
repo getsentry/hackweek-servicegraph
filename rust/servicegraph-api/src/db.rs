@@ -149,60 +149,85 @@ pub async fn query_graph(
 mod tests {
     use super::*;
     use crate::payloads::{EdgeStatus, NodeType};
+    use rand::prelude::*;
     use uuid::Uuid;
+    use chrono::{DateTime, NaiveDateTime, Utc};
+
+    fn create_nodes() -> Vec<Node> {
+        let mut parents = vec![];
+        for i in 0..5 {
+            parents.push(Node {
+                node_id: Uuid::new_v4(),
+                node_type: NodeType::Service,
+                name: format!("service_{}", i),
+                parent_id: None,
+            })
+        }
+
+        let mut children = vec![];
+        let mut rng = rand::thread_rng();
+        for i in 0..10 {
+            let parent_id = parents[rng.gen_range(0..parents.len())].node_id;
+            children.push(Node {
+                node_id: Uuid::new_v4(),
+                node_type: NodeType::Transaction,
+                name: format!("transaction_{}", i),
+                parent_id: Some(parent_id),
+            });
+        }
+
+        parents.append(&mut children);
+        parents
+    }
+
+    fn create_edges(nodes: &Vec<Node>) -> Vec<Edge> {
+        let mut edges: Vec<Edge> = vec![];
+        let mut rng = rand::thread_rng();
+
+        for _ in 1..100 {
+            // this doesn't guard against circular references at all
+            let to_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
+            let from_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
+            
+            let count = rng.gen_range(0..500);
+            let status = EdgeStatus::from_u8(rng.gen_range(1..3));
+
+            let now_s = Utc::now().with_timezone(&Tz::UTC).timestamp();
+            // 60s * 60min * 3h 
+            let timestamp = rng.gen_range(now_s - 10800..now_s);
+            let ts = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
+            edges.push(Edge {
+                ts,
+                from_node_id,
+                to_node_id,
+                status,
+                n: count,
+            });
+        }
+        edges
+    }
 
     #[tokio::test]
     async fn test_register_node() {
-        let node_one = Node {
-            node_id: Uuid::new_v4(),
-            node_type: NodeType::Service,
-            name: String::from("service_a"),
-            parent_id: None,
-        };
-
-        let node_two = Node {
-            node_id: Uuid::new_v4(),
-            node_type: NodeType::Service,
-            name: String::from("service_b"),
-            parent_id: None,
-        };
+        let nodes = create_nodes();
 
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, 1, &vec![node_one, node_two])
+        register_nodes(&mut client, 1, &nodes)
             .await
             .unwrap();
     }
 
     #[tokio::test]
     async fn test_insert_connections() {
-        let node_one = Node {
-            node_id: Uuid::new_v4(),
-            node_type: NodeType::Service,
-            name: String::from("service_a"),
-            parent_id: None,
-        };
-
-        let node_two = Node {
-            node_id: Uuid::new_v4(),
-            node_type: NodeType::Service,
-            name: String::from("service_b"),
-            parent_id: None,
-        };
-
-        let edge = Edge {
-            ts: Utc::now(),
-            from_node_id: node_one.node_id,
-            to_node_id: node_two.node_id,
-            status: EdgeStatus::Ok,
-            n: 1,
-        };
-
+        let nodes = create_nodes();
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, 1, &vec![node_one, node_two])
+        register_nodes(&mut client, 1, &nodes)
             .await
             .unwrap();
 
+        let edges = create_edges(&nodes);
+
         let mut client = get_client().await.unwrap();
-        register_edges(&mut client, 1, &vec![edge]).await.unwrap();
+        register_edges(&mut client, 1, &edges).await.unwrap();
     }
 }
