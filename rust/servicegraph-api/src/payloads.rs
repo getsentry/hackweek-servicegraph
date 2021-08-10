@@ -79,7 +79,19 @@ pub struct Node {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct NodeActivity {
+    #[serde(flatten)]
+    pub node: Node,
+    pub last_activity: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Graph {
     pub edges: Vec<CombinedEdge>,
     pub nodes: Vec<Node>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ActiveNodes {
+    pub nodes: Vec<NodeActivity>,
 }

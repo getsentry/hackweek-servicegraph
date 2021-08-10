@@ -27,6 +27,10 @@ clickhouse-shell:
 	@$(CLICKHOUSE_SHELL) -d servicegraph
 .PHONY: clickhouse-shell
 
+clickhouse-debug-shell:
+	@$(CLICKHOUSE_SHELL) -d servicegraph --send_logs_level=debug
+.PHONY: clickhouse-debug-shell
+
 setup: setup-venv
 .PHONY: setup
 

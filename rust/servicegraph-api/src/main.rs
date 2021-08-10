@@ -25,7 +25,14 @@ fn rocket() -> _ {
     .unwrap();
 
     rocket::build()
-        .mount("/", routes![endpoints::submit, endpoints::query])
+        .mount(
+            "/",
+            routes![
+                endpoints::submit,
+                endpoints::query_graph,
+                endpoints::query_active_nodes
+            ],
+        )
         .mount("/", rocket_cors::catch_all_options_routes())
         .attach(cors.clone())
         .manage(cors)

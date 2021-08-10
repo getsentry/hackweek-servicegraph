@@ -1,10 +1,10 @@
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
-use crate::db::{get_client, query_graph};
+use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
-use crate::payloads::{Edge, Graph, Node};
+use crate::payloads::{ActiveNodes, Edge, Graph, Node};
 use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Deserialize)]
@@ -33,11 +33,25 @@ pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
     Ok("".into())
 }
 
-#[post("/query", format = "json", data = "<params>")]
-pub async fn query(params: Json<QueryParams>) -> Result<Json<Graph>, ApiError> {
+#[post("/graph", format = "json", data = "<params>")]
+pub async fn query_graph(params: Json<QueryParams>) -> Result<Json<Graph>, ApiError> {
     let mut client = get_client().await?;
     Ok(Json(
-        query_graph(
+        db::query_graph(
+            &mut client,
+            params.project_id,
+            params.start_date,
+            params.end_date,
+        )
+        .await?,
+    ))
+}
+
+#[post("/active-nodes", format = "json", data = "<params>")]
+pub async fn query_active_nodes(params: Json<QueryParams>) -> Result<Json<ActiveNodes>, ApiError> {
+    let mut client = get_client().await?;
+    Ok(Json(
+        db::query_active_nodes(
             &mut client,
             params.project_id,
             params.start_date,

@@ -53,7 +53,7 @@ const myConfig = {
 };
 
 function fetchServiceGraph(): Promise<Graph> {
-  return fetch("http://127.0.0.1:8000/query", {
+  return fetch("http://127.0.0.1:8000/graph", {
     method: "POST",
     mode: "cors",
     headers: {

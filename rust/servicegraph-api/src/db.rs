@@ -8,7 +8,7 @@ use lazy_static::lazy_static;
 use uuid::Uuid;
 
 use crate::error::Error;
-use crate::payloads::{CombinedEdge, Edge, Graph, Node, NodeType};
+use crate::payloads::{ActiveNodes, CombinedEdge, Edge, Graph, Node, NodeActivity, NodeType};
 
 lazy_static! {
     static ref CLICKHOUSE_POOL: Pool =
@@ -159,6 +159,81 @@ pub async fn query_graph(
         edges,
         nodes: nodes.into_values().collect(),
     })
+}
+
+pub async fn query_active_nodes(
+    client: &mut ClientHandle,
+    project_id: u64,
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
+) -> Result<ActiveNodes, Error> {
+    let start_date_bound = match start_date {
+        Some(s) => s,
+        None => Utc::now() - Duration::hours(1),
+    };
+    let end_date_bound = match end_date {
+        Some(s) => s,
+        None => Utc::now(),
+    };
+    let block = client
+        .query(&format!(
+            "
+            SELECT
+                s.node_id as node_id,
+                s.last_activity as last_activity,
+                nodes.name as node_name,
+                nodes.node_type as node_type,
+                nodes.parent_id as node_parent_id
+            FROM (
+                SELECT
+                    s.node_id node_id,
+                    max(s.last_activity) last_activity
+                FROM
+                (
+                    SELECT
+                        from_node_id AS node_id,
+                        max(ts) AS last_activity
+                    FROM edges_by_minute_mv
+                    WHERE project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')
+                    GROUP BY node_id
+                    UNION ALL
+                    SELECT
+                        to_node_id AS node_id,
+                        max(ts) AS last_activity
+                    FROM edges_by_minute_mv
+                    WHERE project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')
+                    GROUP BY node_id
+                ) s
+                GROUP BY s.node_id
+            ) s
+            JOIN nodes ON s.node_id = nodes.node_id
+            ",
+            project_id,
+            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            project_id,
+            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+        ))
+        .fetch_all()
+        .await?;
+
+    let mut nodes = Vec::new();
+
+    for row in block.rows() {
+        let ts: DateTime<Tz> = row.get("last_activity")?;
+        nodes.push(NodeActivity {
+            node: Node {
+                node_id: row.get("node_id")?,
+                node_type: NodeType::from_u8(row.get("node_type")?),
+                name: row.get("node_name")?,
+                parent_id: row.get("node_parent_id")?,
+            },
+            last_activity: ts.with_timezone(&Utc),
+        });
+    }
+
+    Ok(ActiveNodes { nodes })
 }
 
 #[cfg(test)]
