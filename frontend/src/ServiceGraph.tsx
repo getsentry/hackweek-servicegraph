@@ -26,6 +26,9 @@ const myConfig = {
   directed: true,
   automaticRearrangeAfterDropNode: true,
   nodeHighlightBehavior: true,
+  highlightDegree: 2,
+  highlightOpacity: 0.4,
+  linkHighlightBehavior: true,
   node: {
     color: "#82c91e",
     size: 240,
@@ -38,6 +41,13 @@ const myConfig = {
     color: "#adb5bd",
     highlightColor: "#343a40",
     strokeWidth: 1.5,
+  },
+  d3: {
+    alphaTarget: 0.05,
+    gravity: -250,
+    linkLength: 120,
+    linkStrength: 2,
+    disableLinkForce: false,
   },
 };
 
