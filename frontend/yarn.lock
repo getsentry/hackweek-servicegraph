@@ -2141,6 +2141,13 @@
   resolved "https://registry.yarnpkg.com/@types/q/-/q-1.5.4.tgz#15925414e0ad2cd765bfef58842f7e26a7accb24"
   integrity sha512-1HcDas8SEj4z1Wc696tH56G8OlRaH/sqZOynNNB+HF0WOeXPaxTtbYzJY2oEfiUxjSKjhCKr+MvR7dCHcEelug==
 
+"@types/react-d3-graph@^2.6.1":
+  version "2.6.1"
+  resolved "https://registry.yarnpkg.com/@types/react-d3-graph/-/react-d3-graph-2.6.1.tgz#2871714ed7a175cd92f2771f5a93ba2c477da2e0"
+  integrity sha512-bC+52uDzcWjs5TelMihhiniR5zvr4EDD5Zfk0fCt4Q4iGjwl2FoR/46mFSBitTJ96DsiuBDuNdoqomDH0zm4ig==
+  dependencies:
+    "@types/react" "*"
+
 "@types/react-dom@^17.0.0":
   version "17.0.9"
   resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-17.0.9.tgz#441a981da9d7be117042e1a6fd3dac4b30f55add"
@@ -10171,6 +10178,11 @@ react-app-polyfill@^2.0.0:
     raf "^3.4.1"
     regenerator-runtime "^0.13.7"
     whatwg-fetch "^3.4.1"
+
+react-d3-graph@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/react-d3-graph/-/react-d3-graph-2.6.0.tgz#b994131e430b568e086970560ba8a26809113173"
+  integrity sha512-U72didZuPuYEqAi1n2bJvnph+9MviIw2x9I0eoxb1IKk3cyEwsJV96n3RL72z/7HDsa1FOvDKuOJE7ujSNZB/Q==
 
 react-dev-utils@^11.0.3:
   version "11.0.4"
