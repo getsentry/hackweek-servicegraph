@@ -97,7 +97,11 @@ function ServiceGraph() {
   //   const queryClient = useQueryClient();
   const { isLoading, error, data } = useQuery(
     "serviceGraph",
-    fetchServiceGraph
+    fetchServiceGraph,
+    {
+      // Refetch the data every second
+      refetchInterval: 1000,
+    }
   );
 
   if (isLoading) {
