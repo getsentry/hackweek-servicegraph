@@ -8,17 +8,18 @@ from datetime import datetime
 from contextvars import ContextVar
 from urllib.request import urlopen, Request
 
-
 SERVICE_NS = uuid.UUID("50e1147a-2643-4b97-a0bd-be87f84851c3")
 
 
-def init(host=None, port=None, project_id=None):
+def init(host=None, port=None, project_id=None, service_ns=None):
     if host is not None:
         client.host = host
     if port is not None:
         client.port = port
     if project_id is not None:
         client.project_id = project_id
+    if service_ns is not None:
+        client.service_ns = service_ns
 
 
 class Client(object):
@@ -26,6 +27,7 @@ class Client(object):
         self.project_id = 1
         self.host = "localhost"
         self.port = 8000
+        self.service_ns = SERVICE_NS
         self.pending_connections = {}
         self.pending_nodes = {}
         self.known_nodes = {}
@@ -123,7 +125,7 @@ class Client(object):
 
     def report_node(self, name, type="service", parent_id=None):
         if type == "service":
-            namespace = SERVICE_NS
+            namespace = self.service_ns
         elif type == "transaction":
             namespace = parent_id
         else:
@@ -156,6 +158,25 @@ client = Client()
 
 
 def parse_graph_context_header(header):
+    """
+    Parses the node information from a header
+
+    Uses the format "key=value key=value"
+
+    >>> parse_graph_context_header("service-node=50e1147a-2643-4b97-a0bd-be87f84851c3")
+    {'service-node': UUID('50e1147a-2643-4b97-a0bd-be87f84851c3')}
+    >>> parse_graph_context_header("service-node=50e1147a26434b97a0bdbe87f84851c3")
+    {'service-node': UUID('50e1147a-2643-4b97-a0bd-be87f84851c3')}
+    >>> parse_graph_context_header("transaction-node=50e1147a26434b97a0bdbe87f84851c3")
+    {'transaction-node': UUID('50e1147a-2643-4b97-a0bd-be87f84851c3')}
+    >>> result = parse_graph_context_header("transaction-node=50e1147a26434b97a0bdbe87f84851c3 service-node=c221a8bef9be11eb9a030242ac130003")
+    >>> len(result)
+    2
+    >>> result['transaction-node']
+    UUID('50e1147a-2643-4b97-a0bd-be87f84851c3')
+    >>> result['service-node']
+    UUID('c221a8be-f9be-11eb-9a03-0242ac130003')
+    """
     rv = {}
 
     for piece in header.split():
@@ -246,7 +267,7 @@ def _patch_flask():
         return old_full_dispatch_request(self)
 
     def patched_process_response(self, response):
-        response = old_process_response(response)
+        response = old_process_response(self, response)
         response.headers["servicegraph-context"] = client.get_graph_context_header()
         client.clear_self()
         return response
