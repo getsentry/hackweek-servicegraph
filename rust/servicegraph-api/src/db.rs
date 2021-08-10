@@ -107,6 +107,7 @@ pub async fn query_graph(
             edges.status_expected_error status_expected_error,
             edges.status_unexpected_error status_unexpected_error
         FROM edges_by_minute_mv edges
+        FINAL
         JOIN nodes from_node
           ON from_node.node_id = edges.from_node_id
          AND from_node.project_id = edges.project_id
