@@ -87,9 +87,11 @@ pub async fn query_graph(
             edges.from_node_id from_node_id,
             from_node.name as from_node_name,
             from_node.node_type as from_node_type,
+            from_node.parent_id as from_node_parent_id,
             edges.to_node_id to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
+            to_node.parent_id as to_node_parent_id,
             edges.status_ok status_ok,
             edges.status_expected_error status_expected_error,
             edges.status_unexpected_error status_unexpected_error
@@ -123,6 +125,7 @@ pub async fn query_graph(
                 node_id: row.get("from_node_id")?,
                 node_type: NodeType::from_u8(row.get("from_node_type")?),
                 name: row.get("from_node_name")?,
+                parent_id: row.get("from_node_parent_id")?,
             },
         );
         nodes.insert(
@@ -131,6 +134,7 @@ pub async fn query_graph(
                 node_id: row.get("to_node_id")?,
                 node_type: NodeType::from_u8(row.get("to_node_type")?),
                 name: row.get("to_node_name")?,
+                parent_id: row.get("to_node_parent_id")?,
             },
         );
     }
@@ -153,12 +157,14 @@ mod tests {
             node_id: Uuid::new_v4(),
             node_type: NodeType::Service,
             name: String::from("service_a"),
+            parent_id: None,
         };
 
         let node_two = Node {
             node_id: Uuid::new_v4(),
             node_type: NodeType::Service,
             name: String::from("service_b"),
+            parent_id: None,
         };
 
         let mut client = get_client().await.unwrap();
@@ -173,12 +179,14 @@ mod tests {
             node_id: Uuid::new_v4(),
             node_type: NodeType::Service,
             name: String::from("service_a"),
+            parent_id: None,
         };
 
         let node_two = Node {
             node_id: Uuid::new_v4(),
             node_type: NodeType::Service,
             name: String::from("service_b"),
+            parent_id: None,
         };
 
         let edge = Edge {

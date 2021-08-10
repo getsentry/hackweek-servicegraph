@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     node_id UUID,
     node_type UInt8,
     name LowCardinality(String),
+    parent_id Nullable(UUID),
     timestamp DateTime
 ) ENGINE = ReplacingMergeTree()
 ORDER BY (timestamp, project_id, name, node_id);

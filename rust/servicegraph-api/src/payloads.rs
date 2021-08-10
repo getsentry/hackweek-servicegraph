@@ -66,6 +66,7 @@ pub struct Node {
     pub node_id: Uuid,
     pub node_type: NodeType,
     pub name: String,
+    pub parent_id: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
