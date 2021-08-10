@@ -10,7 +10,6 @@ from urllib.request import urlopen, Request
 
 
 SERVICE_NS = uuid.UUID("50e1147a-2643-4b97-a0bd-be87f84851c3")
-ENDPOINT_NS = uuid.UUID("e13b4ac5-7989-4d0e-9d0f-1cfd0e82f6af")
 
 
 def init(host=None, port=None, project_id=None):
@@ -125,8 +124,8 @@ class Client(object):
     def report_node(self, name, type="service", parent_id=None):
         if type == "service":
             namespace = SERVICE_NS
-        elif type == "endpoint":
-            namespace = ENDPOINT_NS
+        elif type == "transaction":
+            namespace = parent_id
         else:
             raise TypeError("unknown type")
 
