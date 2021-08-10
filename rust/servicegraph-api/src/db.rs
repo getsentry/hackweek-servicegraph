@@ -104,9 +104,9 @@ pub async fn query_graph(
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
             from_node.parent_id as to_node_parent_id,
-            toUInt32(sum(edges.status_ok)) as status_ok,
-            toUInt32(sum(edges.status_expected_error)) as status_expected_error,
-            toUInt32(sum(edges.status_unexpected_error)) as status_unexpected_error
+            toUInt32(sumIfMerge(edges.status_ok)) as status_ok,
+            toUInt32(sumIfMerge(edges.status_expected_error)) as status_expected_error,
+            toUInt32(sumIfMerge(edges.status_unexpected_error)) as status_unexpected_error
         FROM edges_by_minute_mv edges
         JOIN nodes from_node
           ON from_node.node_id = edges.from_node_id
