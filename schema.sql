@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     parent_id Nullable(UUID),
     timestamp DateTime
 ) ENGINE = ReplacingMergeTree(timestamp)
-ORDER BY (project_id, node_id);
+ORDER BY (project_id, node_id)
+TTL timestamp + toIntervalDay(90);
 
 CREATE TABLE IF NOT EXISTS servicegraph.edges (
     project_id UInt64,
@@ -19,7 +20,8 @@ CREATE TABLE IF NOT EXISTS servicegraph.edges (
     n UInt32
 ) ENGINE = MergeTree()
 PARTITION BY (toYYYYMMDD(ts), project_id, from_node_id)
-ORDER BY ts;
+ORDER BY ts
+TTL ts + toIntervalDay(90);
 
 CREATE TABLE IF NOT EXISTS servicegraph.edges_by_minute (
     -- timestamp bucketed by minute
@@ -31,7 +33,8 @@ CREATE TABLE IF NOT EXISTS servicegraph.edges_by_minute (
     status_expected_error UInt32,
     status_unexpected_error UInt32
 ) ENGINE = SummingMergeTree()
-ORDER BY ts;
+ORDER BY ts
+TTL ts + toIntervalDay(90);
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS servicegraph.edges_by_minute_mv TO servicegraph.edges_by_minute (
