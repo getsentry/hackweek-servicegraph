@@ -60,7 +60,6 @@ Content-Type: application/json
     {
       "node_id": "NODE_ID as guid",
       "name": "human readable name of the node reported in the UI",
-      "description": "human readable extended description for the UI",
       "type": "service | transaction",
       "parent_id": "id of the parent node (eg: service node id) for transactions"
     }
@@ -95,8 +94,8 @@ Content-Type: application/json
   "edges": [
     {
       "ts": "2021-06-09T00:00:00Z",
-      "from": "FROM_NODE_ID",
-      "to": "TO_NODE_ID",
+      "from_node_id": "FROM_NODE_ID",
+      "to_node_id": "TO_NODE_ID",
       "status": "status code",
       "n": "how many times did this happen"
     }

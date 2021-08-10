@@ -22,7 +22,7 @@ impl EdgeStatus {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Edge {
-    pub checkin_time: DateTime<Utc>,
+    pub ts: DateTime<Utc>,
     pub from_node_id: Uuid,
     pub to_node_id: Uuid,
     pub status: EdgeStatus,

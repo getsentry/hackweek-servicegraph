@@ -53,10 +53,10 @@ pub async fn register_edges(
     let block = Block::new()
         .column("project_id", vec![project_id; edges.len()])
         .column(
-            "checkin_time",
+            "ts",
             edges
                 .iter()
-                .map(|x| x.checkin_time.with_timezone(&Tz::UTC))
+                .map(|x| x.ts.with_timezone(&Tz::UTC))
                 .collect::<Vec<_>>(),
         )
         .column(
@@ -182,7 +182,7 @@ mod tests {
         };
 
         let edge = Edge {
-            checkin_time: Utc::now(),
+            ts: Utc::now(),
             from_node_id: node_one.node_id,
             to_node_id: node_two.node_id,
             status: EdgeStatus::Ok,
