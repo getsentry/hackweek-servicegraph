@@ -267,7 +267,7 @@ def _patch_flask():
         return old_full_dispatch_request(self)
 
     def patched_process_response(self, response):
-        response = old_process_response(response)
+        response = old_process_response(self, response)
         response.headers["servicegraph-context"] = client.get_graph_context_header()
         client.clear_self()
         return response
