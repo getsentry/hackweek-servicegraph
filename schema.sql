@@ -11,31 +11,31 @@ ORDER BY (timestamp, project_id, name, node_id);
 
 CREATE TABLE IF NOT EXISTS servicegraph.edges (
     project_id UInt64,
-    checkin_time DateTime,
+    ts DateTime,
     from_node_id UUID,
     to_node_id UUID,
     status UInt8,
     n UInt32
 ) ENGINE = MergeTree()
-PARTITION BY (toYYYYMMDD(checkin_time), project_id, from_node_id)
-ORDER BY checkin_time;
+PARTITION BY (toYYYYMMDD(ts), project_id, from_node_id)
+ORDER BY ts;
 
 CREATE TABLE IF NOT EXISTS servicegraph.edges_by_minute (
     -- timestamp bucketed by minute
     project_id UInt64,
-    checkin_time DateTime,
+    ts DateTime,
     from_node_id UUID,
     to_node_id UUID,
     status_ok UInt32,
     status_expected_error UInt32,
     status_unexpected_error UInt32
 ) ENGINE = SummingMergeTree()
-ORDER BY checkin_time;
+ORDER BY ts;
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS servicegraph.edges_by_minute_mv TO servicegraph.edges_by_minute (
     project_id UInt64,
-    checkin_time DateTime,
+    ts DateTime,
     from_node_id UUID,
     to_node_id UUID,
     status_ok UInt32,
@@ -44,11 +44,11 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS servicegraph.edges_by_minute_mv TO servic
 )
 AS SELECT
     project_id,
-    toStartOfMinute(checkin_time) AS checkin_time,
+    toStartOfMinute(ts) AS ts,
     from_node_id,
     to_node_id,
     sumIf(n, status = 1) as status_ok,
     sumIf(n, status = 2) as status_expected_error,
     sumIf(n, status = 3) as status_unexpected_error
 FROM servicegraph.edges
-GROUP BY project_id, from_node_id, to_node_id, checkin_time;
+GROUP BY project_id, from_node_id, to_node_id, ts;
