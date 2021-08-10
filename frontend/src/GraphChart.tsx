@@ -1,7 +1,7 @@
 import React from "react";
 import * as d3 from "d3";
 import rawData from "./data.json";
-import { ForceLink, SimulationNodeDatum, SimulationLinkDatum } from "d3";
+import { SimulationNodeDatum, SimulationLinkDatum } from "d3";
 import styled from "styled-components";
 
 console.log("rawData", rawData);
