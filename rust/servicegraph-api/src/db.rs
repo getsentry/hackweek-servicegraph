@@ -78,20 +78,29 @@ pub async fn register_edges(
     Ok(())
 }
 
+fn default_date_range(
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
+) -> (DateTime<Utc>, DateTime<Utc>) {
+    (
+        match start_date {
+            Some(s) => s,
+            None => Utc::now() - Duration::hours(1),
+        },
+        match end_date {
+            Some(s) => s,
+            None => Utc::now(),
+        },
+    )
+}
+
 pub async fn query_graph(
     client: &mut ClientHandle,
     project_id: u64,
     start_date: Option<DateTime<Utc>>,
     end_date: Option<DateTime<Utc>>,
 ) -> Result<Graph, Error> {
-    let start_date_bound = match start_date {
-        Some(s) => s,
-        None => Utc::now() - Duration::hours(1),
-    };
-    let end_date_bound = match end_date {
-        Some(s) => s,
-        None => Utc::now(),
-    };
+    let (start_date_bound, end_date_bound) = default_date_range(start_date, end_date);
     let block = client
         .query(&format!(
             "
@@ -117,8 +126,8 @@ pub async fn query_graph(
         WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')
         GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
             project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
         ))
         .fetch_all()
         .await?;
@@ -167,14 +176,7 @@ pub async fn query_active_nodes(
     start_date: Option<DateTime<Utc>>,
     end_date: Option<DateTime<Utc>>,
 ) -> Result<ActiveNodes, Error> {
-    let start_date_bound = match start_date {
-        Some(s) => s,
-        None => Utc::now() - Duration::hours(1),
-    };
-    let end_date_bound = match end_date {
-        Some(s) => s,
-        None => Utc::now(),
-    };
+    let (start_date_bound, end_date_bound) = default_date_range(start_date, end_date);
     let block = client
         .query(&format!(
             "
@@ -209,11 +211,11 @@ pub async fn query_active_nodes(
             JOIN nodes ON s.node_id = nodes.node_id
             ",
             project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
             project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
+            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
         ))
         .fetch_all()
         .await?;
