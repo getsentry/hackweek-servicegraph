@@ -14,9 +14,14 @@ pub async fn get_client() -> Result<ClientHandle, anyhow::Error> {
     Ok(CLICKHOUSE_POOL.get_handle().await?)
 }
 
-pub async fn register_nodes(client: &mut ClientHandle, nodes: &[Node]) -> anyhow::Result<()> {
+pub async fn register_nodes(
+    client: &mut ClientHandle,
+    project_id: u64,
+    nodes: &[Node],
+) -> anyhow::Result<()> {
     let now = Utc::now().with_timezone(&Tz::UTC);
     let block = Block::new()
+        .column("project_id", vec![project_id; nodes.len()])
         .column(
             "node_id",
             nodes.iter().map(|x| x.node_id).collect::<Vec<_>>(),
@@ -37,8 +42,13 @@ pub async fn register_nodes(client: &mut ClientHandle, nodes: &[Node]) -> anyhow
     Ok(())
 }
 
-pub async fn register_edges(client: &mut ClientHandle, edges: &[Edge]) -> anyhow::Result<()> {
+pub async fn register_edges(
+    client: &mut ClientHandle,
+    project_id: u64,
+    edges: &[Edge],
+) -> anyhow::Result<()> {
     let block = Block::new()
+        .column("project_id", vec![project_id; edges.len()])
         .column(
             "checkin_time",
             edges
@@ -84,7 +94,7 @@ mod tests {
         };
 
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, &vec![node_one, node_two])
+        register_nodes(&mut client, 1, &vec![node_one, node_two])
             .await
             .unwrap();
     }
@@ -112,11 +122,11 @@ mod tests {
         };
 
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, &vec![node_one, node_two])
+        register_nodes(&mut client, 1, &vec![node_one, node_two])
             .await
             .unwrap();
 
         let mut client = get_client().await.unwrap();
-        register_edges(&mut client, &vec![edge]).await.unwrap();
+        register_edges(&mut client, 1, &vec![edge]).await.unwrap();
     }
 }

@@ -17,10 +17,10 @@ pub struct SubmitData {
 pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
     let mut client = get_client().await?;
     if !data.nodes.is_empty() {
-        register_nodes(&mut client, &data.nodes).await?;
+        register_nodes(&mut client, data.project_id, &data.nodes).await?;
     }
     if !data.edges.is_empty() {
-        register_edges(&mut client, &data.edges).await?;
+        register_edges(&mut client, data.project_id, &data.edges).await?;
     }
     Ok("".into())
 }
