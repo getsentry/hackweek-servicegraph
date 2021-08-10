@@ -122,17 +122,28 @@ pub async fn query_graph(
         .fetch_all()
         .await?;
 
-    let mut edges = Vec::new();
+    let mut edges: HashMap<Uuid, CombinedEdge> = HashMap::new();
     let mut nodes: HashMap<Uuid, Node> = HashMap::new();
 
     for row in block.rows() {
-        edges.push(CombinedEdge {
+        let new_edge = CombinedEdge {
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
             status_ok: row.get("status_ok")?,
             status_expected_error: row.get("status_expected_error")?,
             status_unexpected_error: row.get("status_unexpected_error")?,
-        });
+        };
+
+        // this is kinda shitty, ideally we can get this already merged from CH
+        edges
+            .entry(row.get("from_node_id")?)
+            .and_modify(|edge| {
+                edge.status_ok += new_edge.status_ok;
+                edge.status_expected_error += new_edge.status_expected_error;
+                edge.status_unexpected_error += new_edge.status_unexpected_error;
+            })
+            .or_insert(new_edge);
+
         nodes.insert(
             row.get("from_node_id")?,
             Node {
@@ -154,7 +165,7 @@ pub async fn query_graph(
     }
 
     Ok(Graph {
-        edges,
+        edges: edges.into_values().collect(),
         nodes: nodes.into_values().collect(),
     })
 }
@@ -163,9 +174,9 @@ pub async fn query_graph(
 mod tests {
     use super::*;
     use crate::payloads::{EdgeStatus, NodeType};
+    use chrono::{DateTime, NaiveDateTime, Utc};
     use rand::prelude::*;
     use uuid::Uuid;
-    use chrono::{DateTime, NaiveDateTime, Utc};
 
     fn create_nodes() -> Vec<Node> {
         let mut parents = vec![];
@@ -202,12 +213,12 @@ mod tests {
             // this doesn't guard against circular references at all
             let to_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
             let from_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
-            
+
             let count = rng.gen_range(0..500);
             let status = EdgeStatus::from_u8(rng.gen_range(1..3));
 
             let now_s = Utc::now().with_timezone(&Tz::UTC).timestamp();
-            // 60s * 60min * 3h 
+            // 60s * 60min * 3h
             let timestamp = rng.gen_range(now_s - 10800..now_s);
             let ts = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
             edges.push(Edge {
@@ -226,18 +237,14 @@ mod tests {
         let nodes = create_nodes();
 
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, 1, &nodes)
-            .await
-            .unwrap();
+        register_nodes(&mut client, 1, &nodes).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_insert_connections() {
         let nodes = create_nodes();
         let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, 1, &nodes)
-            .await
-            .unwrap();
+        register_nodes(&mut client, 1, &nodes).await.unwrap();
 
         let edges = create_edges(&nodes);
 
