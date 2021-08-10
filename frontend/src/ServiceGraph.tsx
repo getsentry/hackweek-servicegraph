@@ -70,6 +70,9 @@ function processServiceGraphData(
   serviceGraphData: Graph
 ): ReactD3Graph.GraphData<ServiceGraphNode, ServiceGraphLink> {
   const nodes: ServiceGraphNode[] = serviceGraphData.nodes.map((node) => {
+    if (node.parent_id) {
+      console.log("node", node);
+    }
     return {
       ...node,
       id: node.node_id,

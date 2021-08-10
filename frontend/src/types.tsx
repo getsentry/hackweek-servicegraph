@@ -14,6 +14,7 @@ export type Node = {
   node_id: Uuid;
   node_type: NodeType;
   name: String;
+  parent_id?: Uuid;
 };
 
 export type Graph = {
