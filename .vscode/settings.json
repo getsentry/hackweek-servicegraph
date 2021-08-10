@@ -1,3 +1,7 @@
 {
-  "python.formatting.provider": "black"
+  "python.formatting.provider": "black",
+  "rust-analyzer.linkedProjects": ["rust/servicegraph-api/Cargo.toml"],
+  "[rust]": {
+    "editor.formatOnSave": true
+  }
 }
