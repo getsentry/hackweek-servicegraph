@@ -1,5 +1,7 @@
 use std::io::Cursor;
 
+pub use anyhow::Error;
+
 use rocket::{
     http::ContentType,
     response::{self, Responder},
@@ -7,11 +9,11 @@ use rocket::{
 };
 
 pub struct ApiError {
-    error: anyhow::Error,
+    error: Error,
 }
 
-impl From<anyhow::Error> for ApiError {
-    fn from(error: anyhow::Error) -> ApiError {
+impl From<Error> for ApiError {
+    fn from(error: Error) -> ApiError {
         dbg!(&error);
         ApiError { error }
     }
