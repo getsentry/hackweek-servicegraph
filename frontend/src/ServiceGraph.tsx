@@ -5,6 +5,7 @@ import { useQuery } from "react-query";
 import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
+import { access } from "fs";
 
 type ServiceGraphNode = ReactD3Graph.GraphNode & Node;
 type ServiceGraphLink = ReactD3Graph.GraphLink & CombinedEdge;
@@ -74,13 +75,58 @@ function processServiceGraphData(
       id: node.node_id,
     };
   });
-  const links: ServiceGraphLink[] = serviceGraphData.edges.map((edge) => {
-    return {
-      ...edge,
-      source: edge.from_node_id,
-      target: edge.to_node_id,
-    };
+
+  // TODO: temporary edge de-duplicator
+  const edgeDupeCheck = new Set();
+  const dictionary = new Map();
+
+  serviceGraphData.edges.forEach((edge) => {
+    const key = `${edge.from_node_id} ${edge.to_node_id}`;
+    if (dictionary.has(key)) {
+      dictionary.get(key).push(edge);
+    } else {
+      dictionary.set(key, [edge]);
+    }
+
+    if (edgeDupeCheck.has(key)) {
+      console.log("found dupe", key);
+      console.log(edge);
+    }
+
+    edgeDupeCheck.add(key);
   });
+
+  console.log(dictionary);
+
+  const links: ServiceGraphLink[] = Array.from(dictionary.entries()).map(
+    ([key, dupes]) => {
+      const edge = dupes.reduce(
+        (acc: ServiceGraphLink, edge: ServiceGraphLink) => {
+          return {
+            ...edge,
+            status_ok: acc.status_ok + edge.status_ok,
+            status_expected_error:
+              acc.status_expected_error + edge.status_expected_error,
+            status_unexpected_error:
+              acc.status_unexpected_error + edge.status_unexpected_error,
+          };
+        }
+      );
+      return {
+        ...edge,
+        source: edge.from_node_id,
+        target: edge.to_node_id,
+      };
+    }
+  );
+
+  //   const links: ServiceGraphLink[] = serviceGraphData.edges.map((edge) => {
+  //     return {
+  //       ...edge,
+  //       source: edge.from_node_id,
+  //       target: edge.to_node_id,
+  //     };
+  //   });
 
   return {
     nodes,
