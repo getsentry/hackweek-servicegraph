@@ -4,7 +4,7 @@ mod payloads;
 extern crate rocket;
 mod db;
 
-use rocket::serde::json::{json, Json, Value};
+use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -17,13 +17,12 @@ fn index() -> &'static str {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
 struct GraphTrace<'r> {
     id: Id,
     message: Cow<'r, str>,
 }
 
-#[post("/log_trace", format = "json", data = "<graph_trace>")]
+#[post("/log_tracae", format = "json", data = "<graph_trace>")]
 fn log_trace(graph_trace: Json<GraphTrace>) -> Json<GraphTrace> {
     println!(
         "Received trace with id {} message {}",
