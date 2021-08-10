@@ -96,26 +96,26 @@ pub async fn query_graph(
         .query(&format!(
             "
         SELECT
-            edges.from_node_id from_node_id,
+            edges.from_node_id as from_node_id,
             from_node.name as from_node_name,
             from_node.node_type as from_node_type,
             from_node.parent_id as from_node_parent_id,
-            edges.to_node_id to_node_id,
+            edges.to_node_id as to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
-            to_node.parent_id as to_node_parent_id,
-            edges.status_ok status_ok,
-            edges.status_expected_error status_expected_error,
-            edges.status_unexpected_error status_unexpected_error
+            from_node.parent_id as to_node_parent_id,
+            toUInt32(sum(edges.status_ok)) as status_ok,
+            toUInt32(sum(edges.status_expected_error)) as status_expected_error,
+            toUInt32(sum(edges.status_unexpected_error)) as status_unexpected_error
         FROM edges_by_minute_mv edges
-        FINAL
         JOIN nodes from_node
           ON from_node.node_id = edges.from_node_id
          AND from_node.project_id = edges.project_id
         JOIN nodes to_node
           ON to_node.node_id = edges.to_node_id
          AND to_node.project_id = edges.project_id
-        WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')",
+        WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')
+        GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
             project_id,
             start_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
             end_date_bound.format("%Y-%m-%d %H:%M:%S").to_string(),
