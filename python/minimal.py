@@ -78,7 +78,7 @@ class Client(object):
         if transaction_id is not None:
             rv = "%s transaction-node=%s" % (rv, transaction_id)
 
-        return "service-node=%s" % (self.self_id,)
+        return rv
 
     def iter_from_nodes(self):
         service_id = self._service_id.get()
@@ -111,12 +111,12 @@ class Client(object):
 
         urlopen(
             Request(
-                url="http://%s:%d/" % (self.host, self.port),
+                url="http://%s:%d/submit" % (self.host, self.port),
                 headers={"content-type": "application/json"},
                 method="POST",
-                data=json.dumps(
+                data=bytes(json.dumps(
                     {"nodes": nodes, "edges": edges, "project_id": self.project_id}
-                ),
+                ), 'utf-8'),
             )
         )
 
@@ -136,14 +136,14 @@ class Client(object):
         if node_id is not None:
             return node_id
 
-        guid = uuid.uuid5(namespace, name.encode("utf-8"))
+        guid = uuid.uuid5(namespace, name)
         self.pending_nodes[str(guid)] = {
             "name": name,
             "type": type,
             "parent_id": str(parent_id) if parent_id is not None else None,
         }
-        self.known_nodes[seen_key] = node_id
-        return node_id
+        self.known_nodes[seen_key] = guid
+        return guid
 
     def report_edge(self, from_node, to_node, status="ok", n=1):
         t = time.time() // 60 * 60
