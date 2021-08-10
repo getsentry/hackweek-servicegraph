@@ -4,8 +4,18 @@ import "./assets/styles.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
+import { createGlobalStyle } from "styled-components";
+import tw from "twin.macro";
+
+const GlobalStyle = createGlobalStyle`
+  body {
+    ${tw`bg-gray-100`}
+  }
+`;
+
 ReactDOM.render(
   <React.StrictMode>
+    <GlobalStyle />
     <App />
   </React.StrictMode>,
   document.getElementById("root")

@@ -4,7 +4,7 @@ import ServiceGraph from "./ServiceGraph";
 
 function App() {
   return (
-    <main className="flex flex-col h-screen justify-center items-center bg-gray-100">
+    <main className="container mx-auto flex flex-col min-h-screen justify-center items-center">
       <ServiceGraph />
     </main>
   );
