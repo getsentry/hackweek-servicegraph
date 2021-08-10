@@ -2,6 +2,8 @@ import React from "react";
 import * as ReactD3Graph from "react-d3-graph";
 import styled from "styled-components";
 import { useQuery } from "react-query";
+import tw from "twin.macro";
+
 import { Graph, Node, CombinedEdge } from "./types";
 
 // the graph configuration, just override the ones you need
@@ -18,6 +20,7 @@ const myConfig = {
     fontSize: 12,
   },
   link: {
+    color: "#adb5bd",
     highlightColor: "#343a40",
   },
 };
@@ -103,7 +106,7 @@ function ServiceGraph() {
 }
 
 const Container = styled.div`
-  outline: 1px solid red;
+  ${tw`border rounded border-solid border-gray-500`};
 `;
 
 export default ServiceGraph;
