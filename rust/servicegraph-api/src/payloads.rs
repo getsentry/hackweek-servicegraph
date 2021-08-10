@@ -19,6 +19,7 @@ impl EdgeStatus {
         }
     }
 
+    #[allow(unused)]
     pub fn from_u8(value: u8) -> Self {
         match value {
             1 => EdgeStatus::Ok,

@@ -42,9 +42,16 @@ const myConfig = {
 };
 
 function fetchServiceGraph(): Promise<Graph> {
-  return fetch("http://127.0.0.1:8000/query?project_id=1").then((res) =>
-    res.json()
-  );
+  return fetch("http://127.0.0.1:8000/query", {
+    method: "POST",
+    mode: "cors",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: 1,
+    }),
+  }).then((res) => res.json());
 }
 
 // Convert service graph data into the format that d3 graph lib can consume
