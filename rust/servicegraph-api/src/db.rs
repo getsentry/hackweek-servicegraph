@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use chrono_tz::Tz;
 use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
@@ -10,7 +10,11 @@ lazy_static! {
         Pool::new("tcp://localhost:9000/servicegraph?compression=lz4");
 }
 
-async fn register_nodes(mut client: ClientHandle, nodes: &[Node]) -> anyhow::Result<()> {
+pub async fn get_client() -> Result<ClientHandle, anyhow::Error> {
+    Ok(CLICKHOUSE_POOL.get_handle().await?)
+}
+
+pub async fn register_nodes(client: &mut ClientHandle, nodes: &[Node]) -> anyhow::Result<()> {
     let now = Utc::now().with_timezone(&Tz::UTC);
     let block = Block::new()
         .column(
@@ -33,7 +37,7 @@ async fn register_nodes(mut client: ClientHandle, nodes: &[Node]) -> anyhow::Res
     Ok(())
 }
 
-async fn register_edges(mut client: ClientHandle, edges: &[Edge]) -> anyhow::Result<()> {
+pub async fn register_edges(client: &mut ClientHandle, edges: &[Edge]) -> anyhow::Result<()> {
     let block = Block::new()
         .column(
             "checkin_time",
@@ -79,8 +83,8 @@ mod tests {
             name: String::from("service_b"),
         };
 
-        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
-        register_nodes(client, &vec![node_one, node_two])
+        let mut client = get_client().await.unwrap();
+        register_nodes(&mut client, &vec![node_one, node_two])
             .await
             .unwrap();
     }
@@ -107,12 +111,12 @@ mod tests {
             n: 1,
         };
 
-        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
-        register_nodes(client, &vec![node_one, node_two])
+        let mut client = get_client().await.unwrap();
+        register_nodes(&mut client, &vec![node_one, node_two])
             .await
             .unwrap();
 
-        let client = CLICKHOUSE_POOL.get_handle().await.unwrap();
-        register_edges(client, &vec![edge]).await.unwrap();
+        let mut client = get_client().await.unwrap();
+        register_edges(&mut client, &vec![edge]).await.unwrap();
     }
 }
