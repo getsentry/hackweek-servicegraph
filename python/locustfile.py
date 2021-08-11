@@ -5,7 +5,7 @@ from provider_names import departments, payment_providers, authentication_provid
 
 
 class Shopper(HttpUser):
-    wait_time = between(0.5, 10)
+    wait_time = between(0.5, 2)
     host= "http://localhost:5000"
     @task(4)
     def shop(self):
