@@ -725,6 +725,14 @@ class ServiceGraphView extends React.Component<Props, State> {
         }
       });
 
+      this.state.nodes.forEach((node) => {
+        if (node.parent_id) {
+          this.graph
+            ?.nodes(`[id = '${node.node_id}']`)
+            .move({ parent: node.parent_id });
+        }
+      });
+
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
 
