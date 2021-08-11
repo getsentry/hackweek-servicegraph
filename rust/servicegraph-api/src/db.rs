@@ -90,25 +90,6 @@ fn get_node_filter(types: &BTreeSet<NodeType>, field: &str) -> Result<String, Er
     Ok(filter)
 }
 
-fn get_edge_filters(
-    from_nodes: &BTreeSet<NodeType>,
-    from_field: &str,
-    to_nodes: &BTreeSet<NodeType>,
-    to_field: &str,
-) -> Result<String, Error> {
-    let mut from_filter = get_node_filter(from_nodes, from_field)?;
-    let to_filter = get_node_filter(to_nodes, to_field)?;
-    if from_filter.is_empty() {
-        Ok(to_filter)
-    } else if to_filter.is_empty() {
-        Ok(from_filter)
-    } else {
-        from_filter.push_str(" AND ");
-        from_filter.push_str(&to_filter);
-        Ok(from_filter)
-    }
-}
-
 fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
     Ok(Node {
         node_id: row.get(format!("{}node_id", prefix).as_str())?,
@@ -125,12 +106,8 @@ pub async fn query_graph(
 ) -> Result<Graph, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
 
-    let node_filter = get_edge_filters(
-        &params.from_types,
-        "from_node.node_type",
-        &params.to_types,
-        "to_node.node_type",
-    )?;
+    let from_node_filter = get_node_filter(&params.from_types, "from_node.node_type")?;
+    let to_node_filter = get_node_filter(&params.to_types, "to_node.mode_type")?;
 
     let block = client
         .query(&format!(
@@ -160,16 +137,16 @@ pub async fn query_graph(
         WHERE edges.project_id = {project_id}
           AND edges.ts >= toDateTime('{start_date}')
           AND edges.ts <= toDateTime('{end_date}')
-          {node_filter}
+          {to_node_filter_and}{to_node_filter}
+          {from_node_filter_and}{from_node_filter}
         GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
             project_id = params.project_id,
             start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
             end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            node_filter = if node_filter.is_empty() {
-                "".to_string()
-            } else {
-                format!("AND {}", node_filter)
-            }
+            to_node_filter_and = if to_node_filter.is_empty() { "" } else {"AND "},
+            to_node_filter = to_node_filter,
+            from_node_filter_and = if from_node_filter.is_empty() { "" } else {"AND "},
+            from_node_filter = from_node_filter,
         ))
         .fetch_all()
         .await?;
