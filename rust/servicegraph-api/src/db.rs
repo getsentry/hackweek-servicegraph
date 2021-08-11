@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::error::Error;
 use crate::payloads::{
-    ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Node,
+    ActiveNodes, CombinedEdge, CommonQueryParams, Edge, EdgeStatus, Graph, GraphQueryParams, Node,
     NodeActivity, NodeQueryParams, NodeType, NodeWithStatus,
 };
 
@@ -91,6 +91,67 @@ fn get_node_filter(types: &BTreeSet<NodeType>, field: &str) -> Result<String, Er
     Ok(filter)
 }
 
+fn get_edge_filter(edge_statuses: &BTreeSet<EdgeStatus>) -> Result<String, Error> {
+    // THIS DOES NOT WORK!
+    let mut filter = String::new();
+    if !edge_statuses.is_empty() {
+        filter.push('(');
+        for (idx, es) in edge_statuses.iter().enumerate() {
+            if idx > 0 {
+                filter.push_str(" AND ");
+            }
+            let clause = match es {
+                EdgeStatus::Ok => "edges.status_ok > 0",
+                EdgeStatus::ExpectedError => "edges.status_expected_error > 0",
+                EdgeStatus::UnexpectedError => "edges.status_unexpected_error > 0",
+            };
+            filter.push_str(clause);
+        }
+        filter.push(')');
+    }
+    Ok(filter)
+}
+
+fn is_node_status_requested(edge_statuses: &BTreeSet<EdgeStatus>, n: &NodeWithStatus) -> bool {
+    match edge_statuses.is_empty() {
+        true => true,
+        false => {
+            let mut res = true;
+            for status in edge_statuses.iter() {
+                res = res
+                    & match status {
+                        EdgeStatus::Ok => n.status_ok > 0,
+                        EdgeStatus::ExpectedError => n.status_expected_error > 0,
+                        EdgeStatus::UnexpectedError => n.status_unexpected_error > 0,
+                    };
+            }
+            res
+        }
+    }
+}
+
+fn is_edge_status_requested(edge_statuses: &BTreeSet<EdgeStatus>, ce: &CombinedEdge) -> bool {
+    match edge_statuses.is_empty() {
+        true => true,
+        false => {
+            let mut res = true;
+            for status in edge_statuses.iter() {
+                res = res
+                    & match status {
+                        EdgeStatus::Ok => ce.status_ok > 0,
+                        EdgeStatus::ExpectedError => ce.status_expected_error > 0,
+                        EdgeStatus::UnexpectedError => ce.status_unexpected_error > 0,
+                    };
+            }
+            res
+        }
+    }
+}
+
+fn and_if_filter(filter: &String) -> &str {
+    return if filter.is_empty() { "" } else { "AND " };
+}
+
 fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
     Ok(Node {
         node_id: row.get(format!("{}node_id", prefix).as_str())?,
@@ -109,7 +170,6 @@ pub async fn query_graph(
 
     let from_node_filter = get_node_filter(&params.from_types, "from_node.node_type")?;
     let to_node_filter = get_node_filter(&params.to_types, "to_node.node_type")?;
-
     let block = client
         .query(&format!(
             r#"
@@ -151,17 +211,9 @@ pub async fn query_graph(
             project_id = params.project_id,
             start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
             end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            to_node_filter_and = if to_node_filter.is_empty() {
-                ""
-            } else {
-                "AND "
-            },
+            to_node_filter_and = and_if_filter(&to_node_filter),
             to_node_filter = to_node_filter,
-            from_node_filter_and = if from_node_filter.is_empty() {
-                ""
-            } else {
-                "AND "
-            },
+            from_node_filter_and = and_if_filter(&from_node_filter),
             from_node_filter = from_node_filter,
         ))
         .fetch_all()
@@ -176,15 +228,17 @@ pub async fn query_graph(
         let status_ok = row.get("status_ok")?;
         let status_expected_error = row.get("status_expected_error")?;
         let status_unexpected_error = row.get("status_unexpected_error")?;
-
-        edges.push(CombinedEdge {
+        let edge = CombinedEdge {
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
             description: row.get("edge_description")?,
             status_ok: status_ok,
             status_expected_error: status_expected_error,
             status_unexpected_error: status_unexpected_error,
-        });
+        };
+        if is_edge_status_requested(&params.edge_statuses, &edge) {
+            edges.push(edge);
+        }
 
         let from_node = node_from_row(&row, "from_")?;
         nodes.insert(from_node.node_id, from_node);
@@ -205,15 +259,15 @@ pub async fn query_graph(
     let mut nodes_with_status = HashMap::new();
 
     for (node_id, node) in nodes {
-        nodes_with_status.insert(
-            node_id,
-            NodeWithStatus {
-                node: node,
-                status_ok: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).0,
-                status_expected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).1,
-                status_unexpected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).2,
-            },
-        );
+        let node_with_status = NodeWithStatus {
+            node: node,
+            status_ok: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).0,
+            status_expected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).1,
+            status_unexpected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).2,
+        };
+        if is_node_status_requested(&params.edge_statuses, &node_with_status) {
+            nodes_with_status.insert(node_id, node_with_status);
+        }
     }
 
     Ok(Graph {
