@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 import uuid
 import random
 import requests
@@ -10,13 +11,16 @@ from datetime import datetime, timedelta, timezone
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 SUBMIT_PAYLOAD = "localhost:8000/submit"
 
-NUM_SERVICES = 10 
-TRANSACTION_PER_SERVICE = 2 
-NUM_TRANSACTIONS = NUM_SERVICES * TRANSACTION_PER_SERVICE
+
 with open(f"{CUR_DIR}/animals.txt") as f:
     ANIMALS = [l.strip() for l in f.readlines()]
 with open(f"{CUR_DIR}/adjectives.txt") as f:
     ADJECTIVES = [l.strip() for l in f.readlines()]
+
+
+NUM_SERVICES = 10
+TRANSACTION_PER_SERVICE = 2 
+NUM_TRANSACTIONS = NUM_SERVICES * TRANSACTION_PER_SERVICE
 EDGES_PER_PERIOD = 1
 PROJECT_ID = 1
 FLUSH_INTERVAL_SECONDS = 10
@@ -55,6 +59,9 @@ def gen_data():
     all_transactions = []
     for service_node in all_services:
         all_transactions.extend([node("transaction", service_node) for _ in range(TRANSACTION_PER_SERVICE)])
+    service_to_transactions = defaultdict(list)
+    for txn_node in all_transactions:
+        service_to_transactions[txn_node["parent_id"]].append(txn_node)
 
     service_weights = [100 / (1.2 ** step) for step in range(1, len(all_services) + 1)] 
     transaction_weights = [100 / (1.2 ** step) for step in range(1, len(all_transactions) + 1)] 
@@ -69,7 +76,14 @@ def gen_data():
             while from_node == to_node:
                 from_node, to_node = random.choices(all_services, weights=service_weights, k=2)
             edges.append(edge(ts, from_node["node_id"], to_node["node_id"]))
-            for n in (from_node, to_node):
+
+            from_transaction = random.choice(service_to_transactions[from_node["node_id"]])
+            to_transaction = random.choice(service_to_transactions[to_node["node_id"]])
+            
+            edges.append(edge(ts, from_transaction["node_id"], to_transaction["node_id"]))
+
+
+            for n in (from_node, to_node, from_transaction, to_transaction):
                 all_nodes[n["node_id"]] = n
         payload = {
             "project_id": PROJECT_ID, 
