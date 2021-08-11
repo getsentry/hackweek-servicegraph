@@ -11,6 +11,10 @@ const GlobalStyle = createGlobalStyle`
   body {
     ${tw`font-sans bg-gray-100`}
   }
+
+  .cytoscape-navigatorOverlay {
+    user-select: none !important;
+  }
 `;
 
 ReactDOM.render(
