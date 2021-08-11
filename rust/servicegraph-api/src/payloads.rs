@@ -12,7 +12,7 @@ pub struct CommonQueryParams {
     pub end_date: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct GraphQueryParams {
     #[serde(flatten)]
     pub common: CommonQueryParams,
@@ -155,35 +155,31 @@ pub struct ActiveNodes {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
-pub struct ServiceMapQueryParams {
-    #[serde(flatten)]
-    pub common: CommonQueryParams,
-    #[serde(default)]
-    pub from_types: BTreeSet<NodeType>,
-    #[serde(default)]
-    pub to_types: BTreeSet<NodeType>,
-}
+pub struct ServiceMapQueryParams(GraphQueryParams);
 
 impl Deref for ServiceMapQueryParams {
     type Target = CommonQueryParams;
 
     fn deref(&self) -> &Self::Target {
-        &self.common
+        &self.0.common
     }
 }
 
 impl From<ServiceMapQueryParams> for GraphQueryParams {
     fn from(query: ServiceMapQueryParams) -> GraphQueryParams {
+        let query = query.0;
         GraphQueryParams {
             common: query.common,
             from_types: query.from_types,
             to_types: query.to_types,
+            edge_statuses: query.edge_statuses,
         }
     }
 }
 
 impl From<ServiceMapQueryParams> for NodeQueryParams {
     fn from(query: ServiceMapQueryParams) -> NodeQueryParams {
+        let query = query.0;
         let mut types = query.from_types;
         types.extend(query.to_types.iter());
         NodeQueryParams {
