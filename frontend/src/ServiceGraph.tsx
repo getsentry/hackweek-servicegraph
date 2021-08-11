@@ -115,9 +115,9 @@ function NodeDetails({ node }: { node: Node | undefined }) {
       <div>Name: {node.name}</div>
       <div>Node Id: {node.node_id}</div>
       <div>Type: {node.node_type}</div>
-      <div>Ok: {node.status_ok}</div>
-      <div>Expected error: {node.status_expected_error}</div>
-      <div>Unexpected error: {node.status_unexpected_error}</div>
+      <div>✅ Ok: {node.status_ok}</div>
+      <div>🛑 Expected error: {node.status_expected_error}</div>
+      <div>🔥 Unexpected error: {node.status_unexpected_error}</div>
     </div>
   );
 }
