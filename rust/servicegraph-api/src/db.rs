@@ -111,7 +111,7 @@ pub async fn query_graph(
 
     let block = client
         .query(&format!(
-            "
+            r#"
         SELECT
             edges.from_node_id as from_node_id,
             from_node.name as from_node_name,
@@ -127,25 +127,40 @@ pub async fn query_graph(
             toUInt32(sumIfMerge(edges.status_ok)) as status_ok,
             toUInt32(sumIfMerge(edges.status_expected_error)) as status_expected_error,
             toUInt32(sumIfMerge(edges.status_unexpected_error)) as status_unexpected_error
-        FROM edges_by_minute_mv edges
-        JOIN nodes from_node
-          ON from_node.node_id = edges.from_node_id
-         AND from_node.project_id = edges.project_id
-        JOIN nodes to_node
-          ON to_node.node_id = edges.to_node_id
-         AND to_node.project_id = edges.project_id
-        WHERE edges.project_id = {project_id}
-          AND edges.ts >= toDateTime('{start_date}')
-          AND edges.ts <= toDateTime('{end_date}')
-          {to_node_filter_and}{to_node_filter}
-          {from_node_filter_and}{from_node_filter}
-        GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
+       FROM edges_by_minute_mv edges
+       JOIN nodes from_node
+         ON from_node.node_id = edges.from_node_id
+        AND from_node.project_id = edges.project_id
+       JOIN nodes to_node
+         ON to_node.node_id = edges.to_node_id
+        AND to_node.project_id = edges.project_id
+      WHERE edges.project_id = {project_id}
+        AND edges.ts >= toDateTime('{start_date}')
+        AND edges.ts <= toDateTime('{end_date}')
+        {to_node_filter_and}{to_node_filter}
+        {from_node_filter_and}{from_node_filter}
+   GROUP BY from_node_id,
+            from_node_name,
+            from_node_type,
+            from_node_parent_id,
+            to_node_id,
+            to_node_name,
+            to_node_type,
+            to_node_parent_id"#,
             project_id = params.project_id,
             start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
             end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            to_node_filter_and = if to_node_filter.is_empty() { "" } else {"AND "},
+            to_node_filter_and = if to_node_filter.is_empty() {
+                ""
+            } else {
+                "AND "
+            },
             to_node_filter = to_node_filter,
-            from_node_filter_and = if from_node_filter.is_empty() { "" } else {"AND "},
+            from_node_filter_and = if from_node_filter.is_empty() {
+                ""
+            } else {
+                "AND "
+            },
             from_node_filter = from_node_filter,
         ))
         .fetch_all()
@@ -194,7 +209,7 @@ pub async fn query_active_nodes(
 
     let block = client
         .query(&format!(
-            "
+            r#"
             SELECT
                 s.node_id as node_id,
                 s.last_activity as last_activity,
@@ -226,7 +241,7 @@ pub async fn query_active_nodes(
             ) s
             JOIN nodes ON s.node_id = nodes.node_id
             WHERE {node_filter}
-            ",
+            "#,
             edge_filter = edge_filter,
             node_filter = node_filter
         ))
