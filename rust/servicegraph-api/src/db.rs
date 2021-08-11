@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
+use std::fmt::Write;
 
 use chrono::Utc;
 use chrono::{DateTime, Duration};
@@ -9,7 +10,8 @@ use lazy_static::lazy_static;
 
 use crate::error::Error;
 use crate::payloads::{
-    ActiveNodes, CombinedEdge, Edge, Graph, Node, NodeActivity, NodeType, QueryParams,
+    ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Node,
+    NodeActivity, NodeQueryParams, NodeType,
 };
 
 lazy_static! {
@@ -60,7 +62,7 @@ pub async fn register_edges(
     Ok(())
 }
 
-fn default_date_range(params: &QueryParams) -> (DateTime<Utc>, DateTime<Utc>) {
+fn default_date_range(params: &CommonQueryParams) -> (DateTime<Utc>, DateTime<Utc>) {
     (
         match params.start_date {
             Some(s) => s,
@@ -73,6 +75,40 @@ fn default_date_range(params: &QueryParams) -> (DateTime<Utc>, DateTime<Utc>) {
     )
 }
 
+fn get_node_filter(types: &BTreeSet<NodeType>, field: &str) -> Result<String, Error> {
+    let mut filter = String::new();
+    if !types.is_empty() {
+        filter.push('(');
+        for (idx, ty) in types.iter().enumerate() {
+            if idx > 0 {
+                filter.push_str(" OR ");
+            }
+            write!(filter, "{} = {}", field, ty.as_u8())?;
+        }
+        filter.push(')');
+    }
+    Ok(filter)
+}
+
+fn get_edge_filters(
+    from_nodes: &BTreeSet<NodeType>,
+    from_field: &str,
+    to_nodes: &BTreeSet<NodeType>,
+    to_field: &str,
+) -> Result<String, Error> {
+    let mut from_filter = get_node_filter(from_nodes, from_field)?;
+    let to_filter = get_node_filter(to_nodes, to_field)?;
+    if from_filter.is_empty() {
+        Ok(to_filter)
+    } else if to_filter.is_empty() {
+        Ok(from_filter)
+    } else {
+        from_filter.push_str(" AND ");
+        from_filter.push_str(&to_filter);
+        Ok(from_filter)
+    }
+}
+
 fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
     Ok(Node {
         node_id: row.get(format!("{}node_id", prefix).as_str())?,
@@ -83,8 +119,19 @@ fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
     })
 }
 
-pub async fn query_graph(client: &mut ClientHandle, params: &QueryParams) -> Result<Graph, Error> {
+pub async fn query_graph(
+    client: &mut ClientHandle,
+    params: &GraphQueryParams,
+) -> Result<Graph, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
+
+    let node_filter = get_edge_filters(
+        &params.from_types,
+        "from_node.node_type",
+        &params.to_types,
+        "to_node.node_type",
+    )?;
+
     let block = client
         .query(&format!(
             "
@@ -110,11 +157,19 @@ pub async fn query_graph(client: &mut ClientHandle, params: &QueryParams) -> Res
         JOIN nodes to_node
           ON to_node.node_id = edges.to_node_id
          AND to_node.project_id = edges.project_id
-        WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')
+        WHERE edges.project_id = {project_id}
+          AND edges.ts >= toDateTime('{start_date}')
+          AND edges.ts <= toDateTime('{end_date}')
+          {node_filter}
         GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
-            params.project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            project_id = params.project_id,
+            start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            node_filter = if node_filter.is_empty() {
+                "".to_string()
+            } else {
+                format!("AND {}", node_filter)
+            }
         ))
         .fetch_all()
         .await?;
@@ -146,15 +201,20 @@ pub async fn query_graph(client: &mut ClientHandle, params: &QueryParams) -> Res
 
 pub async fn query_active_nodes(
     client: &mut ClientHandle,
-    params: &QueryParams,
+    params: &NodeQueryParams,
 ) -> Result<ActiveNodes, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
-    let edge_where = format!(
+    let edge_filter = format!(
         "project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')",
         params.project_id,
         start_date_bound.format("%Y-%m-%d %H:%M:%S"),
         end_date_bound.format("%Y-%m-%d %H:%M:%S"),
     );
+    let mut node_filter = get_node_filter(&params.types, "nodes.node_type")?;
+    if node_filter.is_empty() {
+        node_filter.push_str("1 = 1");
+    }
+
     let block = client
         .query(&format!(
             "
@@ -175,21 +235,23 @@ pub async fn query_active_nodes(
                         from_node_id AS node_id,
                         max(ts) AS last_activity
                     FROM edges_by_minute_mv
-                    WHERE {}
+                    WHERE {edge_filter}
                     GROUP BY node_id
                     UNION ALL
                     SELECT
                         to_node_id AS node_id,
                         max(ts) AS last_activity
                     FROM edges_by_minute_mv
-                    WHERE {}
+                    WHERE {edge_filter}
                     GROUP BY node_id
                 ) s
                 GROUP BY s.node_id
             ) s
             JOIN nodes ON s.node_id = nodes.node_id
+            WHERE {node_filter}
             ",
-            edge_where, edge_where,
+            edge_filter = edge_filter,
+            node_filter = node_filter
         ))
         .fetch_all()
         .await?;
@@ -210,7 +272,7 @@ pub async fn query_active_nodes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::payloads::{EdgeStatus, NodeType};
+    use crate::payloads::{CommonQueryParams, EdgeStatus, NodeType};
     use chrono::{DateTime, NaiveDateTime, Utc};
     use rand::prelude::*;
     use uuid::Uuid;
@@ -292,8 +354,11 @@ mod tests {
         register_edges(&mut client, 1, &edges).await.unwrap();
         let results = query_graph(
             &mut client,
-            &QueryParams {
-                project_id: 1,
+            &GraphQueryParams {
+                common: CommonQueryParams {
+                    project_id: 1,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         )
@@ -303,10 +368,12 @@ mod tests {
         assert!(!results.nodes.is_empty());
         let empty_results = query_graph(
             &mut client,
-            &QueryParams {
-                project_id: 1,
-                start_date: Some(Utc::now() - Duration::weeks(20)),
-                end_date: Some(Utc::now() - Duration::weeks(19)),
+            &GraphQueryParams {
+                common: CommonQueryParams {
+                    project_id: 1,
+                    start_date: Some(Utc::now() - Duration::weeks(20)),
+                    end_date: Some(Utc::now() - Duration::weeks(19)),
+                },
                 ..Default::default()
             },
         )

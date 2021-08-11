@@ -1,18 +1,49 @@
 use std::collections::BTreeSet;
+use std::ops::Deref;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Default)]
-pub struct QueryParams {
+pub struct CommonQueryParams {
     pub project_id: u64,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct GraphQueryParams {
+    #[serde(flatten)]
+    pub common: CommonQueryParams,
     #[serde(default)]
     pub from_types: BTreeSet<NodeType>,
     #[serde(default)]
     pub to_types: BTreeSet<NodeType>,
+}
+
+impl Deref for GraphQueryParams {
+    type Target = CommonQueryParams;
+
+    fn deref(&self) -> &Self::Target {
+        &self.common
+    }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct NodeQueryParams {
+    #[serde(flatten)]
+    pub common: CommonQueryParams,
+    #[serde(default)]
+    pub types: BTreeSet<NodeType>,
+}
+
+impl Deref for NodeQueryParams {
+    type Target = CommonQueryParams;
+
+    fn deref(&self) -> &Self::Target {
+        &self.common
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]

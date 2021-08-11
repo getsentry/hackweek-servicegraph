@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
-use crate::payloads::{ActiveNodes, Edge, Graph, Node, QueryParams};
+use crate::payloads::{ActiveNodes, Edge, Graph, GraphQueryParams, Node, NodeQueryParams};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubmitData {
@@ -31,13 +31,15 @@ pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
 }
 
 #[post("/graph", format = "json", data = "<params>")]
-pub async fn query_graph(params: Json<QueryParams>) -> Result<Json<Graph>, ApiError> {
+pub async fn query_graph(params: Json<GraphQueryParams>) -> Result<Json<Graph>, ApiError> {
     let mut client = get_client().await?;
     Ok(Json(db::query_graph(&mut client, &params).await?))
 }
 
 #[post("/active-nodes", format = "json", data = "<params>")]
-pub async fn query_active_nodes(params: Json<QueryParams>) -> Result<Json<ActiveNodes>, ApiError> {
+pub async fn query_active_nodes(
+    params: Json<NodeQueryParams>,
+) -> Result<Json<ActiveNodes>, ApiError> {
     let mut client = get_client().await?;
     Ok(Json(db::query_active_nodes(&mut client, &params).await?))
 }
