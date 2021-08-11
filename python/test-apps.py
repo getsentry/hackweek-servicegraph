@@ -72,7 +72,7 @@ def create_shop():
     app.debug = True
 
     @app.route('/', methods=["POST", "PUT"])
-    def hello_world():
+    def shop():
         _log.debug("in shop")
         return 'Hello Shop!'
 
@@ -84,7 +84,7 @@ def create_payment():
     app.debug = True
 
     @app.route('/', methods=["POST", "PUT"])
-    def hello_world():
+    def payment():
         _log.debug("in payment")
         return 'Hello Payment!'
 
