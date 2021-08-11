@@ -98,8 +98,6 @@ class Client(object):
             nodes.append(node_info)
 
         for bucket, counters in self.pending_connections.items():
-            print(f"bucket {bucket} type={type(bucket)}")
-            print(f"counters {counters} type={type(counters)}")
             from_node, to_node, ts = bucket
             for status, n in counters.items():
                 edges.append(
