@@ -157,6 +157,12 @@ pub async fn query_active_nodes(
     end_date: Option<DateTime<Utc>>,
 ) -> Result<ActiveNodes, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(start_date, end_date);
+    let edge_where = format!(
+        "project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')",
+        project_id,
+        start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+        end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+    );
     let block = client
         .query(&format!(
             "
@@ -177,26 +183,21 @@ pub async fn query_active_nodes(
                         from_node_id AS node_id,
                         max(ts) AS last_activity
                     FROM edges_by_minute_mv
-                    WHERE project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')
+                    WHERE {}
                     GROUP BY node_id
                     UNION ALL
                     SELECT
                         to_node_id AS node_id,
                         max(ts) AS last_activity
                     FROM edges_by_minute_mv
-                    WHERE project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')
+                    WHERE {}
                     GROUP BY node_id
                 ) s
                 GROUP BY s.node_id
             ) s
             JOIN nodes ON s.node_id = nodes.node_id
             ",
-            project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            project_id,
-            start_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            edge_where, edge_where,
         ))
         .fetch_all()
         .await?;
