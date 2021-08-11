@@ -1,9 +1,10 @@
 import React from "react";
+import styled from "styled-components";
+import { ErrorBoundary } from "react-error-boundary";
+import { useQuery, QueryErrorResetBoundary } from "react-query";
 import cytoscape from "cytoscape";
 // @ts-expect-error
 import cytoscapeCola from "cytoscape-cola";
-import styled from "styled-components";
-import { useQuery } from "react-query";
 import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
@@ -440,7 +441,7 @@ function Details(props: { details: DetailsPayload | undefined }) {
 }
 
 const Container = styled.div`
-  ${tw`rounded shadow-lg bg-white`};
+  ${tw`bg-white flex min-h-screen justify-center items-center content-center`};
   position: absolute;
   width: 100vw;
   height: 100vh;
@@ -454,8 +455,103 @@ const DetailsPanel = styled.div`
   left: 8px;
 `;
 
+const ButtonLink = styled.a`
+  ${tw`whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700`};
+`;
+
+function FetchData() {
+  const { isLoading, error, data, refetch } = useQuery<Graph, Error>(
+    "serviceGraph",
+    fetchServiceGraph,
+    {
+      // Refetch the data every second
+      // refetchInterval: 1000,
+    }
+  );
+
+  if (isLoading) {
+    return (
+      <Container>
+        <h1 className="text-3xl animate-pulse">Loading data</h1>
+      </Container>
+    );
+  }
+
+  if (error) {
+    console.log("error", error);
+    return (
+      <Container>
+        <div className="flex-col">
+          <h1 className="text-3xl">Unable to load data</h1>
+          <hr className="m-4" />
+          <ButtonLink
+            href="#try-again"
+            onClick={(event) => {
+              event.preventDefault();
+              refetch();
+            }}
+          >
+            Try again
+          </ButtonLink>
+          <hr className="m-4" />
+          <pre>{error.message}</pre>
+        </div>
+      </Container>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Container>
+        <div className="flex-col">
+          <h1 className="text-3xl">Empty data</h1>
+          <hr className="m-4" />
+          <ButtonLink
+            href="#try-again"
+            onClick={(event) => {
+              event.preventDefault();
+              refetch();
+            }}
+          >
+            Try again
+          </ButtonLink>
+        </div>
+      </Container>
+    );
+  }
+
+  return <Container>fooo</Container>;
+}
+
 function ServiceGraph() {
-  return <Container>fodddo</Container>;
+  return (
+    <QueryErrorResetBoundary>
+      {({ reset }) => (
+        <ErrorBoundary
+          onReset={reset}
+          fallbackRender={({ resetErrorBoundary }) => (
+            <Container>
+              <div className="flex-col">
+                <h1 className="text-3xl">There was an error!</h1>
+                <hr className="m-4" />
+                <ButtonLink
+                  href="#try-again"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    resetErrorBoundary();
+                  }}
+                >
+                  Try again
+                </ButtonLink>
+              </div>
+            </Container>
+          )}
+        >
+          <FetchData />
+        </ErrorBoundary>
+      )}
+    </QueryErrorResetBoundary>
+  );
 }
 
 export default ServiceGraph;
