@@ -7,11 +7,12 @@ use chrono_tz::Tz;
 use clickhouse_rs::types::{Complex, Row};
 use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
+use uuid::Uuid;
 
 use crate::error::Error;
 use crate::payloads::{
     ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Node,
-    NodeActivity, NodeQueryParams, NodeType,
+    NodeActivity, NodeQueryParams, NodeType, NodeWithStatus,
 };
 
 lazy_static! {
@@ -169,25 +170,55 @@ pub async fn query_graph(
     let mut edges = Vec::new();
     let mut nodes = HashMap::new();
 
+    let mut node_statuses: HashMap<Uuid, (u32, u32, u32)> = HashMap::new();
+
     for row in block.rows() {
+        let status_ok = row.get("status_ok")?;
+        let status_expected_error = row.get("status_expected_error")?;
+        let status_unexpected_error = row.get("status_unexpected_error")?;
+
         edges.push(CombinedEdge {
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
             description: row.get("edge_description")?,
-            status_ok: row.get("status_ok")?,
-            status_expected_error: row.get("status_expected_error")?,
-            status_unexpected_error: row.get("status_unexpected_error")?,
+            status_ok: status_ok,
+            status_expected_error: status_expected_error,
+            status_unexpected_error: status_unexpected_error,
         });
 
         let from_node = node_from_row(&row, "from_")?;
         nodes.insert(from_node.node_id, from_node);
         let to_node = node_from_row(&row, "to_")?;
-        nodes.insert(to_node.node_id, to_node);
+        let to_node_id = to_node.node_id;
+        nodes.insert(to_node_id, to_node);
+
+        let prev = node_statuses.get(&to_node_id).unwrap_or(&(0, 0, 0));
+        let values = (
+            prev.0 + status_ok,
+            prev.1 + status_expected_error,
+            prev.2 + status_unexpected_error,
+        );
+
+        node_statuses.insert(to_node_id, values);
+    }
+
+    let mut nodes_with_status = HashMap::new();
+
+    for (node_id, node) in nodes {
+        nodes_with_status.insert(
+            node_id,
+            NodeWithStatus {
+                node: node,
+                status_ok: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).0,
+                status_expected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).1,
+                status_unexpected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).2,
+            },
+        );
     }
 
     Ok(Graph {
         edges,
-        nodes: nodes.into_values().collect(),
+        nodes: nodes_with_status.into_values().collect(),
     })
 }
 

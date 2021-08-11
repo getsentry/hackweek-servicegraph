@@ -93,6 +93,9 @@ function NodeDetails({ node }: { node: Node | undefined }) {
       <div>Name: {node.name}</div>
       <div>Node Id: {node.node_id}</div>
       <div>Type: {node.node_type}</div>
+      <div>Ok: {node.status_ok}</div>
+      <div>Expected error: {node.status_expected_error}</div>
+      <div>Unexpected error: {node.status_unexpected_error}</div>
     </div>
   );
 }
@@ -182,6 +185,14 @@ function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
       ...node,
       id: node.node_id,
       parent: node.parent_id,
+      group: isUnhealthy(
+        node.status_ok,
+        node.status_expected_error,
+        node.status_unexpected_error
+      )
+        ? "unhealthy"
+        : null,
+
     },
   };
 }
@@ -407,8 +418,15 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: 'edge[group="unhealthy"]',
             style: {
-              "line-color": "#ff0000",
-              "target-arrow-color": "#ff0000",
+              "line-color": "#ffbdb4",
+              "target-arrow-color": "#ffbdb4",
+            },
+          },
+          {
+            selector: 'node[group="unhealthy"]',
+            style: {
+              "border-width": 2,
+              "border-color": "#ff0000",
             },
           },
           {

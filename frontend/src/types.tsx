@@ -17,6 +17,9 @@ export type Node = {
   name: String;
   description: string | null;
   parent_id?: Uuid;
+  status_ok: number;
+  status_expected_error: number;
+  status_unexpected_error: number;
 };
 
 export type Graph = {

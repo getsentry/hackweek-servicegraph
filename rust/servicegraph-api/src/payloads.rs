@@ -133,9 +133,18 @@ pub struct NodeActivity {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct NodeWithStatus {
+    #[serde(flatten)]
+    pub node: Node,
+    pub status_ok: u32,
+    pub status_expected_error: u32,
+    pub status_unexpected_error: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Graph {
     pub edges: Vec<CombinedEdge>,
-    pub nodes: Vec<Node>,
+    pub nodes: Vec<NodeWithStatus>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
