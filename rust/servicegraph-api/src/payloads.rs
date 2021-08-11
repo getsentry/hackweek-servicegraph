@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct CommonQueryParams {
     pub project_id: u64,
     pub start_date: Option<DateTime<Utc>>,
@@ -150,4 +150,49 @@ pub struct Graph {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ActiveNodes {
     pub nodes: Vec<NodeActivity>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct ServiceMapQueryParams {
+    #[serde(flatten)]
+    pub common: CommonQueryParams,
+    #[serde(default)]
+    pub from_types: BTreeSet<NodeType>,
+    #[serde(default)]
+    pub to_types: BTreeSet<NodeType>,
+}
+
+impl Deref for ServiceMapQueryParams {
+    type Target = CommonQueryParams;
+
+    fn deref(&self) -> &Self::Target {
+        &self.common
+    }
+}
+
+impl From<ServiceMapQueryParams> for GraphQueryParams {
+    fn from(query: ServiceMapQueryParams) -> GraphQueryParams {
+        GraphQueryParams {
+            common: query.common,
+            from_types: query.from_types,
+            to_types: query.to_types,
+        }
+    }
+}
+
+impl From<ServiceMapQueryParams> for NodeQueryParams {
+    fn from(query: ServiceMapQueryParams) -> NodeQueryParams {
+        let mut types = query.from_types;
+        types.extend(query.to_types.iter());
+        NodeQueryParams {
+            common: query.common,
+            types,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ServiceMap {
+    pub graph: Graph,
+    pub active_nodes: ActiveNodes,
 }
