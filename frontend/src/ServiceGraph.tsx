@@ -45,7 +45,13 @@ type DetailsPayload =
     };
 
 const fetchServiceGraph =
-  ({ nodeSources }: { nodeSources: Set<string> }) =>
+  ({
+    nodeSources,
+    nodeTargets,
+  }: {
+    nodeSources: Set<string>;
+    nodeTargets: Set<string>;
+  }) =>
   (): Promise<Graph> => {
     return fetch("http://127.0.0.1:8000/graph", {
       method: "POST",
@@ -56,6 +62,7 @@ const fetchServiceGraph =
       body: JSON.stringify({
         project_id: 1,
         from_types: Array.from(nodeSources),
+        to_types: Array.from(nodeTargets),
       }),
     }).then((res) => res.json());
   };
@@ -226,6 +233,8 @@ type Props = {
   data: Graph;
   nodeSources: Set<NodeType>;
   toggleNodeSource: (nodeType: NodeType) => void;
+  nodeTargets: Set<NodeType>;
+  toggleNodeTarget: (nodeType: NodeType) => void;
 };
 
 type GraphReference = {
@@ -785,7 +794,8 @@ class ServiceGraphView extends React.Component<Props, State> {
   };
 
   render() {
-    const { toggleNodeSource, nodeSources } = this.props;
+    const { toggleNodeSource, nodeSources, toggleNodeTarget, nodeTargets } =
+      this.props;
 
     return (
       <React.Fragment>
@@ -827,6 +837,33 @@ class ServiceGraphView extends React.Component<Props, State> {
                 Services
               </ToggleLink>
             </div>
+            <div>
+              <strong>Target</strong>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeTargets.has("transaction")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleNodeTarget("transaction");
+                }}
+              >
+                Transactions
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeTargets.has("service")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleNodeTarget("service");
+                }}
+              >
+                Services
+              </ToggleLink>
+            </div>
           </div>
 
           <hr className="m-2" />
@@ -846,7 +883,7 @@ const Controls = styled.div`
 
 function FetchData() {
   const [nodeSources, setNodeSources] = React.useState<Set<NodeType>>(
-    new Set(["transaction", "service"] as NodeType[])
+    new Set([] as NodeType[])
   );
 
   const toggleNodeSource = (nodeType: NodeType) => {
@@ -858,9 +895,30 @@ function FetchData() {
         nextState.add(nodeType);
       }
 
-      if (nextState.size === 0) {
-        return new Set(["transaction", "service"] as NodeType[]);
+      // if (nextState.size === 0) {
+      //   return new Set(["transaction", "service"] as NodeType[]);
+      // }
+
+      return nextState;
+    });
+  };
+
+  const [nodeTargets, setNodeTargets] = React.useState<Set<NodeType>>(
+    new Set([] as NodeType[])
+  );
+
+  const toggleNodeTarget = (nodeType: NodeType) => {
+    setNodeTargets((prevState) => {
+      const nextState = new Set(prevState);
+      if (prevState.has(nodeType)) {
+        nextState.delete(nodeType);
+      } else {
+        nextState.add(nodeType);
       }
+
+      // if (nextState.size === 0) {
+      //   return new Set(["transaction", "service"] as NodeType[]);
+      // }
 
       return nextState;
     });
@@ -868,7 +926,7 @@ function FetchData() {
 
   const { isLoading, error, data, refetch } = useQuery<Graph, Error>(
     "serviceGraph",
-    fetchServiceGraph({ nodeSources }),
+    fetchServiceGraph({ nodeSources, nodeTargets }),
     {
       // Refetch the data every second
       refetchInterval: 1000,
@@ -931,6 +989,8 @@ function FetchData() {
       data={data}
       nodeSources={nodeSources}
       toggleNodeSource={toggleNodeSource}
+      nodeTargets={nodeTargets}
+      toggleNodeTarget={toggleNodeTarget}
     />
   );
 }
