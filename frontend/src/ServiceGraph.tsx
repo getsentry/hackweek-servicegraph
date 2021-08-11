@@ -215,7 +215,6 @@ function ServiceGraph() {
             {
               selector: "edge",
               style: {
-                "curve-style": "straight",
                 "line-color": "#bdd3d4",
                 "target-arrow-shape": "triangle",
               },
