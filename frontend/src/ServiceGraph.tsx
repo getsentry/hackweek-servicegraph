@@ -85,327 +85,6 @@ function isUnhealthy(
   return false;
 }
 
-// Convert service graph data into the format that cytoscape lib can consume
-function processServiceGraphData(serviceGraphData: Graph) {
-  const nodes = serviceGraphData.nodes.map((node): cytoscape.NodeDefinition => {
-    return {
-      data: {
-        ...node,
-        id: node.node_id,
-        parent: node.parent_id,
-      },
-    };
-  });
-
-  const edges = serviceGraphData.edges.map((edge): cytoscape.EdgeDefinition => {
-    return {
-      data: {
-        ...edge,
-        source: edge.from_node_id,
-        target: edge.to_node_id,
-        group: isUnhealthy(
-          edge.status_ok,
-          edge.status_expected_error,
-          edge.status_unexpected_error
-        )
-          ? "unhealthy"
-          : null,
-      },
-    };
-  });
-
-  return {
-    nodes,
-    edges,
-  };
-}
-
-function ServiceGraphOld() {
-  const serviceGraphContainerElement = React.useRef<HTMLDivElement>(null);
-  const graph = React.useRef<cytoscape.Core>();
-
-  const [details, setDetails] = React.useState<DetailsPayload | undefined>(
-    undefined
-  );
-  // Fetch service graph data
-  //   const queryClient = useQueryClient();
-  const { isLoading, error, data } = useQuery(
-    "serviceGraph",
-    fetchServiceGraph,
-    {
-      // Refetch the data every second
-      // refetchInterval: 1000,
-    }
-  );
-
-  React.useEffect(() => {
-    if (!serviceGraphContainerElement.current) {
-      return;
-    }
-
-    let minimap: any = undefined;
-
-    try {
-      if (!graph.current || graph.current.destroyed()) {
-        if (graph.current?.destroyed()) {
-          console.log("graph destroyed; recreating");
-        }
-        cytoscape.use(cytoscapeCola);
-
-        let nodes: cytoscape.NodeDefinition[] = [];
-        let edges: cytoscape.EdgeDefinition[] = [];
-
-        if (data) {
-          const results = processServiceGraphData(data);
-          nodes = results.nodes;
-          edges = results.edges;
-        }
-
-        graph.current = cytoscape({
-          // @ts-expect-error
-          ready: function () {
-            const core = this as unknown as cytoscape.Core;
-            if (!core) {
-              return;
-            }
-            // core
-            //   .layout({
-            //     name: "cola",
-            //     nodeSpacing: function () {
-            //       return 50;
-            //     },
-            //     // flow: { axis: "x", minSeparation: 300 },
-            //     // idealEdgeLength: () => 200,
-            //     // fit: false,
-            //   } as any)
-            //   .run();
-          },
-          layout: {
-            name: "cola",
-            nodeSpacing: function () {
-              return 100;
-            },
-            flow: { axis: "y", minSeparation: 100 },
-            fit: false,
-          } as any,
-          elements: {
-            nodes: [
-              ...nodes,
-              // { data: { id: "n1" } },
-              // { data: { id: "n2" } },
-              // { data: { id: "n3", parent: "n8" } },
-              // { data: { id: "n5" } },
-              // { data: { id: "n6", parent: "n8" } },
-              // { data: { id: "n7", parent: "n8" } },
-              // { data: { id: "n8" } },
-              // { data: { id: "f1" } },
-              // { data: { id: "f2" } },
-              // { data: { id: "f3", parent: "n8" } },
-            ],
-            edges: [
-              ...edges,
-              // { data: { source: "n1", target: "f1" } },
-              // { data: { source: "n1", target: "n3" } },
-              // { data: { source: "f1", target: "n2" } },
-              // { data: { source: "f1", target: "n3" } },
-              // { data: { source: "n3", target: "f2" } },
-              // { data: { source: "f2", target: "n5" } },
-              // { data: { source: "n5", target: "n8" } },
-              // { data: { source: "n6", target: "n3" } },
-              // { data: { source: "n6", target: "n7" } },
-              // { data: { source: "n6", target: "f3" } },
-            ],
-          },
-          minZoom: 0.3,
-          maxZoom: 1,
-          style: [
-            {
-              selector: "node",
-              style: {
-                "background-color": "#bdd3d4",
-                label: "data(name)",
-                "text-valign": "bottom",
-                "background-opacity": 0.7,
-              },
-            },
-
-            {
-              selector: ":parent",
-              style: {
-                //      'background-opacity': 0.333,
-                "background-color": "#e8e8e8",
-                "border-color": "#DADADA",
-                //      'border-width': 3,
-                "text-valign": "bottom",
-              },
-            },
-            {
-              selector: "edge",
-              style: {
-                "line-color": "#bdd3d4",
-                "curve-style": "bezier",
-                "target-arrow-shape": "triangle",
-              },
-            },
-            {
-              selector: 'edge[group="unhealthy"]',
-              style: {
-                "line-color": "#ff0000",
-                "target-arrow-color": "#ff0000",
-              },
-            },
-            {
-              selector: "node:selected",
-              style: {
-                "background-color": "#33ff00",
-                "border-color": "#22ee00",
-              },
-            },
-
-            {
-              selector: "node.fixed",
-              style: {
-                shape: "diamond",
-                "background-color": "#9D9696",
-              },
-            },
-
-            {
-              selector: "node.fixed:selected",
-              style: {
-                "background-color": "#33ff00",
-              },
-            },
-
-            {
-              selector: "node.alignment",
-              style: {
-                shape: "round-heptagon",
-                "background-color": "#fef2d1",
-              },
-            },
-
-            {
-              selector: "node.alignment:selected",
-              style: {
-                "background-color": "#33ff00",
-              },
-            },
-
-            {
-              selector: "node.relative",
-              style: {
-                shape: "rectangle",
-                "background-color": "#fed3d1",
-              },
-            },
-
-            {
-              selector: "node.relative:selected",
-              style: {
-                "background-color": "#33ff00",
-              },
-            },
-
-            {
-              selector: "edge:selected",
-              style: {
-                "line-color": "#33ff00",
-                "target-arrow-color": "#33ff00",
-              },
-            },
-          ],
-          // wheelSensitivity: 0.2,
-          container: serviceGraphContainerElement.current,
-        });
-
-        // @ts-expect-error
-        minimap = graph.current.navigator();
-
-        const fetchNodeById = (nodeId: string) => {
-          return data?.nodes.find((node: Node) => node.node_id === nodeId);
-        };
-
-        graph.current.on("tap", function (evt) {
-          if (evt.target === graph.current) {
-            setDetails(undefined);
-          }
-        });
-
-        graph.current.on("tap", "node", function (evt) {
-          const node = evt.target;
-
-          const result = fetchNodeById(node.id());
-
-          if (result) {
-            setDetails({
-              type: "node",
-              payload: result,
-            });
-          }
-        });
-
-        graph.current.on("tap", "edge", function (evt) {
-          const edge = evt.target as cytoscape.EdgeSingularTraversing;
-
-          const result = data?.edges.find(
-            (data) =>
-              data.from_node_id === edge.source().id() &&
-              data.to_node_id === edge.target().id()
-          );
-
-          if (result) {
-            setDetails({
-              type: "edge",
-              payload: result,
-              source: fetchNodeById(result.from_node_id),
-              destination: fetchNodeById(result.to_node_id),
-            });
-          }
-        });
-      }
-    } catch (error) {
-      console.error(error);
-    }
-
-    return () => {
-      if (graph.current) {
-        graph.current.destroy();
-      }
-
-      if (minimap) {
-        minimap.destroy();
-      }
-    };
-  }, [data, error, isLoading]);
-
-  if (isLoading) {
-    return <Container>Loading</Container>;
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <p>{error as Error}</p>
-        <pre>{JSON.stringify(error)}</pre>
-      </Container>
-    );
-  }
-
-  if (!data) {
-    return <Container>No Service Graph Data.</Container>;
-  }
-
-  return (
-    <React.Fragment>
-      <Container ref={serviceGraphContainerElement} />
-      <DetailsPanel>
-        <Details details={details} />
-      </DetailsPanel>
-    </React.Fragment>
-  );
-}
-
 function NodeDetails({ node }: { node: Node | undefined }) {
   if (!node) {
     return null;
@@ -642,8 +321,6 @@ class ServiceGraphView extends React.Component<Props, State> {
   shouldComponentUpdate(nextProps: Props, nextState: State) {
     const propsNotEqual = !_.isEqual(this.props, nextProps);
     const stateNotEqual = !_.isEqual(this.state, nextState);
-    // console.log("propsNotEqual", propsNotEqual);
-    // console.log("stateNotEqual", stateNotEqual);
     return propsNotEqual || stateNotEqual;
   }
 
@@ -657,12 +334,8 @@ class ServiceGraphView extends React.Component<Props, State> {
         return;
       }
 
-      console.log("componentDidMount");
-
       const nodes: cytoscape.NodeDefinition[] = [];
       const edges: cytoscape.EdgeDefinition[] = [];
-
-      console.log("this.state (componentDidMount)", this.state);
 
       this.state.staging.add.nodes.forEach((node_id) => {
         const node = this.state.nodes.get(node_id);
@@ -815,6 +488,8 @@ class ServiceGraphView extends React.Component<Props, State> {
               .empty(),
             `expect edge to exist in cytoscape graph: ${edge}`
           );
+        } else {
+          invariant(false, `expected edge: ${edge_key}`);
         }
       });
 
@@ -838,8 +513,6 @@ class ServiceGraphView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    console.log("componentDidUpdate", this.state);
-
     this.state.committed.nodes.forEach((node_id) => {
       invariant(
         !this.graph?.nodes(`[id = '${node_id}']`).empty(),
@@ -870,8 +543,6 @@ class ServiceGraphView extends React.Component<Props, State> {
     const hasChanges =
       hasNodesToAdd || hasNodesToRemove || hasEdgesToAdd || hasEdgesToRemove;
 
-    console.log("componentDidUpdate.hasChanges", hasChanges);
-
     if (this.graph && hasChanges) {
       if (this.layout) {
         this.layout.stop();
@@ -881,6 +552,39 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(this.state.committed.nodes),
         edges: new Set(this.state.committed.edges),
       };
+
+      // Removal of any nodes that are parents (i.e. has children) will also delete their children.
+      // We set parents of nodes to be removed to be null.
+      this.state.staging.remove.nodes.forEach((node_id) => {
+        this.graph?.nodes(`[id = '${node_id}']`).move({ parent: null });
+      });
+
+      this.state.staging.remove.nodes.forEach((node_id) => {
+        if (!committed.nodes.has(node_id)) {
+          throw Error(`expect node to exist in committed graph: ${node_id}`);
+        }
+        if (this.graph?.nodes(`[id = '${node_id}']`).empty()) {
+          throw Error(
+            `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
+          );
+        }
+
+        const prevLength = this.graph?.nodes().toArray().length ?? 0;
+
+        // console.log("graph nodes (before delete)", prevLength);
+        committed.nodes.delete(node_id);
+
+        // console.log("deleting", node_id);
+        this.graph?.remove(`node[id = '${node_id}']`);
+
+        const afterLength = this.graph?.nodes().toArray().length ?? 0;
+        // console.log("graph nodes (after delete)", afterLength);
+
+        invariant(
+          prevLength - afterLength === 1,
+          "expected removal of only one node"
+        );
+      });
 
       this.state.staging.add.nodes.forEach((node_id) => {
         const node = this.state.nodes.get(node_id);
@@ -900,25 +604,6 @@ class ServiceGraphView extends React.Component<Props, State> {
         } else {
           throw Error(`unable to find edge: ${edge_key}`);
         }
-      });
-
-      this.state.staging.remove.nodes.forEach((node_id) => {
-        if (!committed.nodes.has(node_id)) {
-          throw Error(`expect node to exist in committed graph: ${node_id}`);
-        }
-
-        console.log(this.graph?.nodes(`[id = '${node_id}']`).toArray());
-        if (this.graph?.nodes(`[id = '${node_id}']`).empty()) {
-          // console.error(
-          //   `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
-          // );
-          // throw Error(
-          //   `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
-          // );
-        }
-
-        committed.nodes.delete(node_id);
-        this.graph?.remove(`node[id = '${node_id}']`);
       });
 
       this.state.staging.remove.edges.forEach((edge_key) => {
@@ -988,7 +673,7 @@ function FetchData() {
   }
 
   if (error) {
-    console.log("error", error);
+    console.error("error", error);
     return (
       <Container>
         <div className="flex-col">
