@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use chrono::Utc;
 use chrono::{DateTime, Duration};
 use chrono_tz::Tz;
+use clickhouse_rs::types::{Complex, Row};
 use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
-use uuid::Uuid;
 
 use crate::error::Error;
 use crate::payloads::{ActiveNodes, CombinedEdge, Edge, Graph, Node, NodeActivity, NodeType};
@@ -19,6 +19,12 @@ pub async fn get_client() -> Result<ClientHandle, Error> {
     Ok(CLICKHOUSE_POOL.get_handle().await?)
 }
 
+macro_rules! colvec {
+    ($source:expr, $expr:expr) => {
+        $source.iter().map($expr).collect::<Vec<_>>()
+    };
+}
+
 pub async fn register_nodes(
     client: &mut ClientHandle,
     project_id: u64,
@@ -27,25 +33,10 @@ pub async fn register_nodes(
     let now = Utc::now().with_timezone(&Tz::UTC);
     let block = Block::new()
         .column("project_id", vec![project_id; nodes.len()])
-        .column(
-            "node_id",
-            nodes.iter().map(|x| x.node_id).collect::<Vec<_>>(),
-        )
-        .column(
-            "node_type",
-            nodes
-                .iter()
-                .map(|x| x.node_type.as_u8())
-                .collect::<Vec<_>>(),
-        )
-        .column(
-            "name",
-            nodes.iter().map(|x| x.name.clone()).collect::<Vec<_>>(),
-        )
-        .column(
-            "parent_id",
-            nodes.iter().map(|x| x.parent_id).collect::<Vec<_>>(),
-        )
+        .column("node_id", colvec!(nodes, |x| x.node_id))
+        .column("node_type", colvec!(nodes, |x| x.node_type.as_u8()))
+        .column("name", colvec!(nodes, |x| x.name.clone()))
+        .column("parent_id", colvec!(nodes, |x| x.parent_id))
         .column("timestamp", vec![now; nodes.len()]);
     client.insert("nodes", block).await?;
     Ok(())
@@ -58,26 +49,11 @@ pub async fn register_edges(
 ) -> Result<(), Error> {
     let block = Block::new()
         .column("project_id", vec![project_id; edges.len()])
-        .column(
-            "ts",
-            edges
-                .iter()
-                .map(|x| x.ts.with_timezone(&Tz::UTC))
-                .collect::<Vec<_>>(),
-        )
-        .column(
-            "from_node_id",
-            edges.iter().map(|x| x.from_node_id).collect::<Vec<_>>(),
-        )
-        .column(
-            "to_node_id",
-            edges.iter().map(|x| x.to_node_id).collect::<Vec<_>>(),
-        )
-        .column(
-            "status",
-            edges.iter().map(|x| x.status.as_u8()).collect::<Vec<_>>(),
-        )
-        .column("n", edges.iter().map(|x| x.n).collect::<Vec<_>>());
+        .column("ts", colvec!(edges, |x| x.ts.with_timezone(&Tz::UTC)))
+        .column("from_node_id", colvec!(edges, |x| x.from_node_id))
+        .column("to_node_id", colvec!(edges, |x| x.to_node_id))
+        .column("status", colvec!(edges, |x| x.status.as_u8()))
+        .column("n", colvec!(edges, |x| x.n));
     client.insert("edges", block).await?;
     Ok(())
 }
@@ -96,6 +72,15 @@ fn default_date_range(
             None => Utc::now(),
         },
     )
+}
+
+fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
+    Ok(Node {
+        node_id: row.get(format!("{}node_id", prefix).as_str())?,
+        node_type: NodeType::from_u8(row.get(format!("{}node_type", prefix).as_str())?),
+        name: row.get(format!("{}node_name", prefix).as_str())?,
+        parent_id: row.get(format!("{}node_parent_id", prefix).as_str())?,
+    })
 }
 
 pub async fn query_graph(
@@ -137,7 +122,7 @@ pub async fn query_graph(
         .await?;
 
     let mut edges = Vec::new();
-    let mut nodes: HashMap<Uuid, Node> = HashMap::new();
+    let mut nodes = HashMap::new();
 
     for row in block.rows() {
         edges.push(CombinedEdge {
@@ -148,24 +133,10 @@ pub async fn query_graph(
             status_unexpected_error: row.get("status_unexpected_error")?,
         });
 
-        nodes.insert(
-            row.get("from_node_id")?,
-            Node {
-                node_id: row.get("from_node_id")?,
-                node_type: NodeType::from_u8(row.get("from_node_type")?),
-                name: row.get("from_node_name")?,
-                parent_id: row.get("from_node_parent_id")?,
-            },
-        );
-        nodes.insert(
-            row.get("to_node_id")?,
-            Node {
-                node_id: row.get("to_node_id")?,
-                node_type: NodeType::from_u8(row.get("to_node_type")?),
-                name: row.get("to_node_name")?,
-                parent_id: row.get("to_node_parent_id")?,
-            },
-        );
+        let from_node = node_from_row(&row, "from_")?;
+        nodes.insert(from_node.node_id, from_node);
+        let to_node = node_from_row(&row, "to_")?;
+        nodes.insert(to_node.node_id, to_node);
     }
 
     Ok(Graph {
@@ -229,12 +200,7 @@ pub async fn query_active_nodes(
     for row in block.rows() {
         let ts: DateTime<Tz> = row.get("last_activity")?;
         nodes.push(NodeActivity {
-            node: Node {
-                node_id: row.get("node_id")?,
-                node_type: NodeType::from_u8(row.get("node_type")?),
-                name: row.get("node_name")?,
-                parent_id: row.get("node_parent_id")?,
-            },
+            node: node_from_row(&row, "")?,
             last_activity: ts.with_timezone(&Utc),
         });
     }
