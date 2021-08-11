@@ -26,3 +26,12 @@ export type Graph = {
   edges: Array<CombinedEdge>;
   nodes: Array<Node>;
 };
+
+export type NodeActivity = {
+  node: Node;
+  last_activity: string;
+};
+
+export type ActiveNodes = {
+  nodes: Array<NodeActivity>;
+};

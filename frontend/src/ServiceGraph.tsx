@@ -9,7 +9,14 @@ import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
 
-import { Uuid, Graph, Node, CombinedEdge, NodeType } from "./types";
+import {
+  Uuid,
+  Graph,
+  Node,
+  CombinedEdge,
+  NodeType,
+  ActiveNodes,
+} from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
@@ -49,8 +56,8 @@ const fetchServiceGraph =
     nodeSources,
     nodeTargets,
   }: {
-    nodeSources: Set<string>;
-    nodeTargets: Set<string>;
+    nodeSources: Set<NodeType>;
+    nodeTargets: Set<NodeType>;
   }) =>
   (): Promise<Graph> => {
     return fetch("http://127.0.0.1:8000/graph", {
@@ -63,6 +70,22 @@ const fetchServiceGraph =
         project_id: 1,
         from_types: Array.from(nodeSources),
         to_types: Array.from(nodeTargets),
+      }),
+    }).then((res) => res.json());
+  };
+
+const fetchActiveNodes =
+  ({ nodeTypes }: { nodeTypes: Set<NodeType> }) =>
+  (): Promise<ActiveNodes> => {
+    return fetch("http://127.0.0.1:8000/active-nodes", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        project_id: 1,
+        types: nodeTypes,
       }),
     }).then((res) => res.json());
   };
