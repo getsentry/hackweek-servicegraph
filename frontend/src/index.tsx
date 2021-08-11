@@ -9,7 +9,7 @@ import tw from "twin.macro";
 
 const GlobalStyle = createGlobalStyle`
   body {
-    ${tw`bg-gray-100`}
+    ${tw`font-sans bg-gray-100`}
   }
 `;
 

@@ -105,7 +105,7 @@ function processServiceGraphData(serviceGraphData: Graph) {
   };
 }
 
-function ServiceGraph() {
+function ServiceGraphOld() {
   const serviceGraphContainerElement = React.useRef<HTMLDivElement>(null);
   const graph = React.useRef<cytoscape.Core>();
 
@@ -444,7 +444,6 @@ const Container = styled.div`
   position: absolute;
   width: 100vw;
   height: 100vh;
-  outline: 1px solid red;
 `;
 
 const DetailsPanel = styled.div`
@@ -454,5 +453,9 @@ const DetailsPanel = styled.div`
   top: 8px;
   left: 8px;
 `;
+
+function ServiceGraph() {
+  return <Container>fodddo</Container>;
+}
 
 export default ServiceGraph;
