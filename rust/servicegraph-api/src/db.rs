@@ -279,48 +279,131 @@ mod tests {
 
     fn create_nodes() -> Vec<Node> {
         let mut parents = vec![];
-        for i in 0..5 {
-            parents.push(Node {
+        let mut children = vec![];
+        for children_count in 0..5 {
+            let node = Node {
                 node_id: Uuid::new_v4(),
                 node_type: NodeType::Service,
-                name: format!("service_{}", i),
+                name: format!("service_{}", children_count),
                 description: None,
                 parent_id: None,
-            })
+            };
+            match children_count {
+                0 => {}
+                // 1 kid
+                1 | 5 => {
+                    children.push(Node {
+                        node_id: Uuid::new_v4(),
+                        node_type: NodeType::Transaction,
+                        name: format!("transaction_{}", children.len()),
+                        description: None,
+                        parent_id: Some(node.node_id),
+                    });
+                }
+                // 2 kids
+                2 | 4 => {
+                    for _ in 0..1 {
+                        children.push(Node {
+                            node_id: Uuid::new_v4(),
+                            node_type: NodeType::Transaction,
+                            name: format!("transaction_{}", children.len()),
+                            description: None,
+                            parent_id: Some(node.node_id),
+                        });
+                    }
+                }
+                // 3 kids
+                _ => {
+                    for _ in 0..2 {
+                        children.push(Node {
+                            node_id: Uuid::new_v4(),
+                            node_type: NodeType::Transaction,
+                            name: format!("transaction_{}", children.len()),
+                            description: None,
+                            parent_id: Some(node.node_id),
+                        });
+                    }
+                }
+            }
+            parents.push(node);
         }
-
-        let mut children = vec![];
-        let mut rng = rand::thread_rng();
-        for i in 0..10 {
-            let parent_id = parents[rng.gen_range(0..parents.len())].node_id;
-            children.push(Node {
-                node_id: Uuid::new_v4(),
-                node_type: NodeType::Transaction,
-                name: format!("transaction_{}", i),
-                description: None,
-                parent_id: Some(parent_id),
-            });
-        }
-
         parents.append(&mut children);
         parents
     }
+    enum EdgeTypes {
+        ServiceToService,
+        ServiceToTransaction,
+        TransactionToTransaction,
+    }
 
-    fn create_edges(nodes: &Vec<Node>) -> Vec<Edge> {
+    impl EdgeTypes {
+        fn from_u8(value: u8) -> EdgeTypes {
+            match value {
+                0 => EdgeTypes::ServiceToService,
+                1 => EdgeTypes::ServiceToTransaction,
+                _ => EdgeTypes::TransactionToTransaction,
+            }
+        }
+    }
+
+    fn create_edges(nodes: &[Node]) -> Vec<Edge> {
         let mut edges: Vec<Edge> = vec![];
         let mut rng = rand::thread_rng();
 
-        for _ in 1..100 {
-            // this doesn't guard against circular references at all
-            let to_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
-            let from_node_id = nodes[rng.gen_range(0..nodes.len())].node_id;
+        let (services, transactions): (Vec<&Node>, Vec<&Node>) = nodes
+            .iter()
+            .partition(|node| matches!(node.node_type, NodeType::Service));
+
+        let random_service =
+            |rng: &mut ThreadRng| services[rng.gen_range(0..services.len())].node_id;
+
+        let random_transaction = |rng: &mut ThreadRng| {
+            let transaction = transactions[rng.gen_range(0..transactions.len())];
+            let service = services
+                .iter()
+                .find(|s| s.node_id == transaction.parent_id.unwrap())
+                .unwrap();
+            (transaction.node_id, service.node_id)
+        };
+
+        for _ in 0..15 {
+            let edge_type = EdgeTypes::from_u8(rng.gen_range(0..=3) as u8);
+            let (to_node_id, from_node_id, extra_edge) = match edge_type {
+                EdgeTypes::ServiceToService => {
+                    let src_service = random_service(&mut rng);
+                    let dst_service = random_service(&mut rng);
+                    (src_service, dst_service, None)
+                }
+                EdgeTypes::ServiceToTransaction => {
+                    let src_service = random_service(&mut rng);
+                    let (dst_transaction, dst_service) = random_transaction(&mut rng);
+                    (
+                        src_service,
+                        dst_transaction,
+                        Some((src_service, dst_service)),
+                    )
+                }
+                EdgeTypes::TransactionToTransaction => {
+                    let (src_transaction, src_service) = random_transaction(&mut rng);
+                    let (mut dst_transaction, _) = random_transaction(&mut rng);
+                    // no "recursive" transactions
+                    while dst_transaction == src_transaction {
+                        dst_transaction = random_transaction(&mut rng).0;
+                    }
+                    (
+                        src_transaction,
+                        dst_transaction,
+                        Some((src_service, dst_transaction)),
+                    )
+                }
+            };
 
             let count = rng.gen_range(0..500);
             let status = EdgeStatus::from_u8(rng.gen_range(1..3));
 
             let now_s = Utc::now().with_timezone(&Tz::UTC).timestamp();
-            // 60s * 60min * 3h
-            let timestamp = rng.gen_range(now_s - 10800..now_s);
+            // 60s * 60min * 1h
+            let timestamp = rng.gen_range(now_s - 3600..now_s);
             let ts = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
             edges.push(Edge {
                 ts,
@@ -330,17 +413,32 @@ mod tests {
                 description: Some("calls".into()),
                 n: count,
             });
+
+            // if it's a transaction -> transaction then the src transaction
+            // also needs an edge between its service and the destination's transaction
+            if let Some((src, dst)) = extra_edge {
+                edges.push(Edge {
+                    ts,
+                    from_node_id: src,
+                    to_node_id: dst,
+                    status,
+                    description: Some("calls".into()),
+                    n: count,
+                });
+            }
         }
         edges
     }
 
-    #[tokio::test]
-    async fn test_register_node() {
-        let nodes = create_nodes();
+    // #[tokio::test]
+    // async fn test_register_nodes() {
+    //     let nodes = create_nodes();
 
-        let mut client = get_client().await.unwrap();
-        register_nodes(&mut client, 1, &nodes).await.unwrap();
-    }
+    //     let mut client = get_client().await.unwrap();
+    //     register_nodes(&mut client, 1, &nodes).await.unwrap();
+
+    //     // todo: check nodes somehow
+    // }
 
     #[tokio::test]
     async fn test_insert_connections() {
