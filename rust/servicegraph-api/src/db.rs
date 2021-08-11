@@ -342,6 +342,9 @@ mod tests {
         let mut edges: Vec<Edge> = vec![];
         let mut rng = rand::thread_rng();
 
+        // a really shitty way to track existing T->T edges
+        let mut existing_tt_edges: Vec<_> = vec![];
+
         let (services, transactions): (Vec<&Node>, Vec<&Node>) = nodes
             .iter()
             .partition(|node| matches!(node.node_type, NodeType::Service));
@@ -379,9 +382,14 @@ mod tests {
                     let (src_transaction, src_service) = random_transaction(&mut rng);
                     let (mut dst_transaction, _) = random_transaction(&mut rng);
                     // no "recursive" transactions
-                    while dst_transaction == src_transaction {
+                    while dst_transaction == src_transaction
+                        || existing_tt_edges.contains(&(src_transaction, dst_transaction))
+                    {
                         dst_transaction = random_transaction(&mut rng).0;
                     }
+
+                    existing_tt_edges.push((src_transaction, dst_transaction));
+                    existing_tt_edges.push((dst_transaction, src_transaction));
                     (
                         src_transaction,
                         dst_transaction,
@@ -397,6 +405,7 @@ mod tests {
             // 60s * 60min * 1h
             let timestamp = rng.gen_range(now_s - 3600..now_s);
             let ts = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
+
             edges.push(Edge {
                 ts,
                 from_node_id,
@@ -408,6 +417,7 @@ mod tests {
 
             // if it's a transaction -> transaction then the src transaction
             // also needs an edge between its service and the destination's transaction
+            // this does not prevent cycles
             if let Some((src, dst)) = extra_edge {
                 edges.push(Edge {
                     ts,
