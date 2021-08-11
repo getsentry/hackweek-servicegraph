@@ -8,6 +8,8 @@ from flask import Flask, request
 from werkzeug.serving import run_simple
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
+from provider_names import departments, payment_providers, authentication_providers
+
 _log = logging.getLogger("main")
 REPORTING_PORT = 5000
 APP_PORT = 8000
@@ -15,26 +17,23 @@ SERVICE_NS = uuid.UUID('13f07817-8ccb-4961-8507-1a3e6fd02066')
 minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 
 
-def from_response(response):
-    """Convert a requests response to a flask response"""
-    return response.text, response.status_code
+def main():
+    _configure_logging()
+    apps = {
+        "/shop": create_shop_service(),
+        "/pay": create_payment_service(),
+        "/auth": create_authentication_service(),
+    }
+    add_payment_providers(apps)
+    add_authentication_providers(apps)
+    add_warehouses(apps)
+
+    app = DispatcherMiddleware(create_main_service(), apps)
+    run_simple('localhost', APP_PORT, app,
+               use_reloader=True, use_debugger=False, use_evalex=True, threaded=True)
 
 
-def to_url(relative):
-    ret_val = f"http://localhost:{APP_PORT}"
-
-    if relative[0] != "/":
-        ret_val += "/"
-
-    ret_val += relative
-
-    if not ret_val.endswith("/"):
-        ret_val += "/"
-
-    return ret_val
-
-
-def create_main():
+def create_main_service():
     app = Flask("main")
 
     @app.route("/", methods=["POST", "PUT"])
@@ -59,7 +58,7 @@ def create_main():
             resp = requests.post(to_url("shop/"), json=req)
             return from_response(resp)
         elif request_type == "pay":
-            resp = requests.post(to_url("payment/"), json=req)
+            resp = requests.post(to_url("pay/"), json=req)
             return from_response(resp)
         else:
             return f"Invalid request type", 400
@@ -67,19 +66,37 @@ def create_main():
     return app
 
 
-def create_shop():
+def create_shop_service():
     app = Flask("shop")
     app.debug = True
 
     @app.route('/', methods=["POST", "PUT"])
     def shop():
         _log.debug("in shop")
-        return 'Hello Shop!'
+
+        try:
+            req = request.json
+        except:
+            _log.debug("create authentication bad request")
+            return "invalid request", 400
+
+        department = str(req.get("department")).lower()
+
+        deps = [x.lower() for x in departments()]
+
+        if department not in deps:
+            _log.debug(f"invalid department {department}")
+            return "invalid department", 400
+
+        warehouse_url = to_url(f"shop/{department}")
+
+        resp = requests.post(warehouse_url, req)
+        return from_response(resp)
 
     return app
 
 
-def create_payment():
+def create_payment_service():
     app = Flask("payment")
     app.debug = True
 
@@ -106,12 +123,10 @@ def create_payment():
         resp = requests.post(pay_url, req)
         return from_response(resp)
 
-
-
     return app
 
 
-def create_authentication():
+def create_authentication_service():
     app = Flask("authentication")
     app.debug = True
 
@@ -133,10 +148,67 @@ def create_authentication():
             _log.debug(f"invalid auth provider {auth_provider}")
             return "invalid authenticator provider", 400
 
-        auth_url = to_url(f"authenticate/{auth_provider}")
+        auth_url = to_url(f"auth/{auth_provider}")
 
         resp = requests.post(auth_url, req)
         return from_response(resp)
+
+    return app
+
+
+def create_payment_provider_service(name):
+    app = Flask(name)
+    app.debug = True
+
+    @app.route('/', methods=["POST", "PUT"])
+    def pay():
+        _log.debug(f"in payment provider {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Payment Declined", 404
+        else:
+            return "Provider is experiencing some difficulties", 500
+
+    return app
+
+
+def create_auth_provider_service(name):
+    app = Flask(name)
+    app.debug = True
+
+    @app.route('/', methods=["POST", "PUT"])
+    def authenticate():
+        _log.debug(f"in payment provider {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Bad Credentials", 401
+        else:
+            return "Provider is experiencing some difficulties", 500
+
+    return app
+
+
+def create_warehouse_service(name):
+    app = Flask(name)
+    app.debug = True
+
+    @app.route('/', methods=["POST", "PUT"])
+    def check_product():
+        _log.debug(f"in warehouse {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Not Available", 401
+        else:
+            return "Warehouse down", 500
 
     return app
 
@@ -162,81 +234,47 @@ def _configure_logging():
     _log.addHandler(ch)
 
 
-_configure_logging()
-
-
-def create_payment_provider(name):
-    app = Flask(name)
-    app.debug = True
-
-    @app.route('/', methods=["POST", "PUT"])
-    def pay():
-        _log.debug(f"in payment provider {name}")
-        payment_status = random.random()
-
-        if payment_status < 0.8:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Payment Declined", 404
-        else:
-            return "Provider is experiencing some difficulties", 500
-
-    return app
-
-
-def create_auth_provider(name):
-    app = Flask(name)
-    app.debug = True
-
-    @app.route('/', methods=["POST", "PUT"])
-    def authenticate():
-        _log.debug(f"in payment provider {name}")
-        payment_status = random.random()
-
-        if payment_status < 0.8:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Bad Credentials", 401
-        else:
-            return "Provider is experiencing some difficulties", 500
-
-    return app
-
-
-def payment_providers():
-    return ["PayPal", "Due", "Stripe", "FlagShip", "Square", "BitPay", "Adyen", "GoCardless", "Visa"]
-
-
 def add_payment_providers(apps):
     providers = payment_providers()
     for provider in providers:
-        apps[f"/pay/{provider.lower()}"] = create_payment_provider(provider)
+        apps[f"/pay/{provider.lower()}"] = create_payment_provider_service(provider)
 
     return apps
-
-
-def authentication_providers():
-    return ["Google", "Facebook", "Twitter", "Yahoo", "Apple", "Microsoft", "Github"]
 
 
 def add_authentication_providers(apps):
     auth_providers = authentication_providers()
 
     for provider in auth_providers:
-        apps[f"/authenticate/{provider.lower()}"] = create_auth_provider(provider)
+        apps[f"/auth/{provider.lower()}"] = create_auth_provider_service(provider)
 
     return apps
 
 
-if __name__ == '__main__':
-    apps = {
-        "/shop": create_shop(),
-        "/payment": create_payment(),
-        "/auth": create_authentication(),
-    }
-    add_payment_providers(apps)
-    add_authentication_providers(apps)
+def add_warehouses(apps):
+    for departament in departments():
+        apps[f"/shop/{departament.lower()}"] = create_warehouse_service(departament)
 
-    app = DispatcherMiddleware(create_main(), apps)
-    run_simple('localhost', APP_PORT, app,
-               use_reloader=True, use_debugger=False, use_evalex=True, threaded=True)
+
+
+def from_response(response):
+    """Convert a requests response to a flask response"""
+    return response.text, response.status_code
+
+
+def to_url(relative):
+    ret_val = f"http://localhost:{APP_PORT}"
+
+    if relative[0] != "/":
+        ret_val += "/"
+
+    ret_val += relative
+
+    if not ret_val.endswith("/"):
+        ret_val += "/"
+
+    return ret_val
+
+
+if __name__ == '__main__':
+    main()
