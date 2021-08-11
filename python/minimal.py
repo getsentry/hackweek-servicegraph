@@ -3,6 +3,7 @@ import time
 import json
 import threading
 import atexit
+import socket
 
 from datetime import datetime
 from contextvars import ContextVar
@@ -103,6 +104,7 @@ class Client(object):
             for status, n in counters.items():
                 edges.append(
                     {
+                        "description": "HTTP",
                         "ts": datetime.utcfromtimestamp(ts).isoformat() + "Z",
                         "from_node_id": from_node,
                         "to_node_id": to_node,
@@ -140,6 +142,7 @@ class Client(object):
 
         guid = uuid.uuid5(namespace, name)
         self.pending_nodes[str(guid)] = {
+            "description": socket.gethostname(),
             "name": name,
             "node_type": type,
             "parent_id": str(parent_id) if parent_id is not None else None,
