@@ -7,12 +7,24 @@ import cytoscape from "cytoscape";
 import cytoscapeCola from "cytoscape-cola";
 import tw from "twin.macro";
 import _ from "lodash";
+import invariant from "invariant";
 
 import { Uuid, Graph, Node, CombinedEdge } from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
+
+function makeLayoutConfig() {
+  return {
+    name: "cola",
+    nodeSpacing: function () {
+      return 100;
+    },
+    flow: { axis: "y", minSeparation: 100 },
+    fit: false,
+  } as any;
+}
 
 try {
   cytoscape.use(cytoscapeCola);
@@ -513,6 +525,7 @@ type State = {
   staging: {
     add: GraphReference;
     remove: GraphReference;
+    previousEdges: Map<string, CombinedEdge>;
   };
   committed: GraphReference;
 };
@@ -530,6 +543,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(),
         edges: new Set(),
       },
+      previousEdges: new Map(),
     },
     committed: {
       nodes: new Set(),
@@ -539,12 +553,11 @@ class ServiceGraphView extends React.Component<Props, State> {
 
   serviceGraphContainerElement = React.createRef<HTMLDivElement>();
   graph: cytoscape.Core | undefined = undefined;
+  layout: cytoscape.Layouts | undefined = undefined;
   minimap: any = undefined;
 
   static getDerivedStateFromProps(props: Props, prevState: State): State {
     const { data } = props;
-
-    console.log("data", data);
 
     const nodesMap: Map<Uuid, Node> = new Map();
     const edgesMap: Map<string, CombinedEdge> = new Map();
@@ -558,6 +571,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(),
         edges: new Set(),
       },
+      previousEdges: prevState.edges,
     };
 
     // add any new nodes and mark stale nodes to be removed from the cytoscape graph
@@ -605,16 +619,32 @@ class ServiceGraphView extends React.Component<Props, State> {
       staging.add.edges.delete(edge_key);
     });
 
-    return {
-      ...prevState,
-      staging,
-      nodes: nodesMap,
-      edges: edgesMap,
-    };
+    const hasNodesToAdd = staging.add.nodes.size > 0;
+    const hasNodesToRemove = staging.remove.nodes.size > 0;
+    const hasEdgesToAdd = staging.add.edges.size > 0;
+    const hasEdgesToRemove = staging.remove.edges.size > 0;
+
+    const hasChanges =
+      hasNodesToAdd || hasNodesToRemove || hasEdgesToAdd || hasEdgesToRemove;
+
+    if (hasChanges) {
+      return {
+        ...prevState,
+        staging,
+        nodes: nodesMap,
+        edges: edgesMap,
+      };
+    }
+
+    return prevState;
   }
 
-  shouldComponentUpdate(nextProps: Props) {
-    return _.isEqual(this.props, nextProps);
+  shouldComponentUpdate(nextProps: Props, nextState: State) {
+    const propsNotEqual = !_.isEqual(this.props, nextProps);
+    const stateNotEqual = !_.isEqual(this.state, nextState);
+    // console.log("propsNotEqual", propsNotEqual);
+    // console.log("stateNotEqual", stateNotEqual);
+    return propsNotEqual || stateNotEqual;
   }
 
   componentDidMount() {
@@ -627,10 +657,12 @@ class ServiceGraphView extends React.Component<Props, State> {
         return;
       }
 
+      console.log("componentDidMount");
+
       const nodes: cytoscape.NodeDefinition[] = [];
       const edges: cytoscape.EdgeDefinition[] = [];
 
-      console.log("this.state", this.state);
+      console.log("this.state (componentDidMount)", this.state);
 
       this.state.staging.add.nodes.forEach((node_id) => {
         const node = this.state.nodes.get(node_id);
@@ -651,14 +683,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       });
 
       this.graph = cytoscape({
-        layout: {
-          name: "cola",
-          nodeSpacing: function () {
-            return 100;
-          },
-          flow: { axis: "y", minSeparation: 100 },
-          fit: false,
-        } as any,
+        layout: makeLayoutConfig(),
         minZoom: 0.3,
         maxZoom: 1,
         style: [
@@ -765,8 +790,126 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       // @ts-expect-error
       this.minimap = this.graph.navigator();
+
+      const committed = {
+        nodes: new Set(this.state.staging.add.nodes),
+        edges: new Set(this.state.staging.add.edges),
+      };
+
+      committed.nodes.forEach((node_id) => {
+        invariant(
+          this.graph?.nodes(`[id = '${node_id}']`).empty(),
+          `expect node to exist in cytoscape graph: ${node_id}`
+        );
+      });
+
+      this.setState({
+        staging: {
+          add: {
+            nodes: new Set(),
+            edges: new Set(),
+          },
+          remove: {
+            nodes: new Set(),
+            edges: new Set(),
+          },
+          previousEdges: new Map(),
+        },
+        committed,
+      });
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  componentDidUpdate(prevProps: Props, prevState: State) {
+    console.log("componentDidUpdate", this.state);
+
+    const hasNodesToAdd = this.state.staging.add.nodes.size > 0;
+    const hasNodesToRemove = this.state.staging.remove.nodes.size > 0;
+    const hasEdgesToAdd = this.state.staging.add.edges.size > 0;
+    const hasEdgesToRemove = this.state.staging.remove.edges.size > 0;
+
+    const hasChanges =
+      hasNodesToAdd || hasNodesToRemove || hasEdgesToAdd || hasEdgesToRemove;
+
+    console.log("componentDidUpdate.hasChanges", hasChanges);
+
+    if (this.graph && hasChanges) {
+      if (this.layout) {
+        this.layout.stop();
+      }
+
+      const committed = {
+        nodes: new Set(this.state.committed.nodes),
+        edges: new Set(this.state.committed.edges),
+      };
+
+      this.state.staging.add.nodes.forEach((node_id) => {
+        const node = this.state.nodes.get(node_id);
+        if (node) {
+          committed.nodes.add(node_id);
+          this.graph?.add(nodeToCytoscape(node));
+        } else {
+          throw Error(`unable to find node: ${node_id}`);
+        }
+      });
+
+      this.state.staging.add.edges.forEach((edge_key) => {
+        const edge = this.state.edges.get(edge_key);
+        if (edge) {
+          committed.edges.add(edge_key);
+          this.graph?.add(edgeToCytoscape(edge));
+        } else {
+          throw Error(`unable to find edge: ${edge_key}`);
+        }
+      });
+
+      this.state.staging.remove.nodes.forEach((node_id) => {
+        if (!committed.nodes.has(node_id)) {
+          throw Error(`expect node to exist in committed graph: ${node_id}`);
+        }
+
+        console.log(this.graph?.nodes(`[id = '${node_id}']`).toArray());
+        if (this.graph?.nodes(`[id = '${node_id}']`).empty()) {
+          console.error(`expect node to exist in cytoscape graph: ${node_id}`);
+          // throw Error(`expect node to exist in cytoscape graph: ${node_id}`);
+        }
+
+        committed.nodes.delete(node_id);
+        this.graph?.remove(`node[id = '${node_id}']`);
+      });
+
+      this.state.staging.remove.edges.forEach((edge_key) => {
+        const edge = this.state.staging.previousEdges.get(edge_key);
+        if (edge) {
+          committed.edges.delete(getEdgeKey(edge));
+          const cytoscapeEdge = edgeToCytoscape(edge);
+          this.graph?.remove(
+            `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
+          );
+        } else {
+          throw Error(`unable to find edge: ${edge_key}`);
+        }
+      });
+
+      this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
+      this.layout.run();
+
+      this.setState({
+        staging: {
+          add: {
+            nodes: new Set(),
+            edges: new Set(),
+          },
+          remove: {
+            nodes: new Set(),
+            edges: new Set(),
+          },
+          previousEdges: new Map(),
+        },
+        committed,
+      });
     }
   }
 
@@ -781,7 +924,7 @@ class ServiceGraphView extends React.Component<Props, State> {
   }
 
   render() {
-    return <Container ref={this.serviceGraphContainerElement}>foo</Container>;
+    return <Container ref={this.serviceGraphContainerElement} />;
   }
 }
 
@@ -791,7 +934,7 @@ function FetchData() {
     fetchServiceGraph,
     {
       // Refetch the data every second
-      // refetchInterval: 1000,
+      refetchInterval: 1000,
     }
   );
 
