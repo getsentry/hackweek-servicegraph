@@ -2,16 +2,11 @@ import React from "react";
 import cytoscape from "cytoscape";
 // @ts-expect-error
 import fcose from "cytoscape-fcose";
-import * as ReactD3Graph from "react-d3-graph";
 import styled from "styled-components";
 import { useQuery } from "react-query";
 import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
-import useWindowSize from "./useWindowSize";
-
-type ServiceGraphNode = ReactD3Graph.GraphNode & Node;
-type ServiceGraphLink = ReactD3Graph.GraphLink & CombinedEdge;
 
 type DetailsPayload =
   | {
@@ -24,36 +19,6 @@ type DetailsPayload =
       source: Node | undefined;
       destination: Node | undefined;
     };
-
-// the graph configuration, just override the ones you need
-const myConfig = {
-  directed: true,
-  automaticRearrangeAfterDropNode: true,
-  nodeHighlightBehavior: true,
-  highlightDegree: 2,
-  highlightOpacity: 0.4,
-  linkHighlightBehavior: true,
-  node: {
-    color: "#82c91e",
-    size: 240,
-    highlightStrokeColor: "#2b8a3e",
-    labelProperty: "name",
-    fontColor: "black",
-    fontSize: 12,
-  },
-  link: {
-    color: "#adb5bd",
-    highlightColor: "#343a40",
-    strokeWidth: 1.5,
-  },
-  d3: {
-    alphaTarget: 0.05,
-    gravity: -250,
-    linkLength: 120,
-    linkStrength: 2,
-    disableLinkForce: false,
-  },
-};
 
 function fetchServiceGraph(): Promise<Graph> {
   return fetch("http://127.0.0.1:8000/graph", {
@@ -68,34 +33,35 @@ function fetchServiceGraph(): Promise<Graph> {
   }).then((res) => res.json());
 }
 
-// Convert service graph data into the format that d3 graph lib can consume
-function processServiceGraphData(
-  serviceGraphData: Graph
-): ReactD3Graph.GraphData<ServiceGraphNode, ServiceGraphLink> {
-  const nodes: ServiceGraphNode[] = serviceGraphData.nodes.map((node) => {
+// Convert service graph data into the format that cytoscape lib can consume
+function processServiceGraphData(serviceGraphData: Graph) {
+  const nodes = serviceGraphData.nodes.map((node): cytoscape.NodeDefinition => {
     return {
-      ...node,
-      id: node.node_id,
+      data: {
+        ...node,
+        id: node.node_id,
+        parent: node.parent_id,
+      },
     };
   });
 
-  const links: ServiceGraphLink[] = serviceGraphData.edges.map((edge) => {
+  const edges = serviceGraphData.edges.map((edge): cytoscape.EdgeDefinition => {
     return {
-      ...edge,
-      source: edge.from_node_id,
-      target: edge.to_node_id,
+      data: {
+        ...edge,
+        source: edge.from_node_id,
+        target: edge.to_node_id,
+      },
     };
   });
 
   return {
     nodes,
-    links,
+    edges,
   };
 }
 
 function ServiceGraph() {
-  const windowSize = useWindowSize();
-
   const serviceGraphContainerElement = React.useRef<HTMLDivElement>(null);
   const graph = React.useRef<cytoscape.Core>();
 
@@ -129,25 +95,9 @@ function ServiceGraph() {
         let edges: cytoscape.EdgeDefinition[] = [];
 
         if (data) {
-          nodes = data.nodes.map((node): cytoscape.NodeDefinition => {
-            return {
-              data: {
-                ...node,
-                id: node.node_id,
-                parent: node.parent_id,
-              },
-            };
-          });
-
-          edges = data.edges.map((edge): cytoscape.EdgeDefinition => {
-            return {
-              data: {
-                ...edge,
-                source: edge.from_node_id,
-                target: edge.to_node_id,
-              },
-            };
-          });
+          const results = processServiceGraphData(data);
+          nodes = results.nodes;
+          edges = results.edges;
         }
 
         graph.current = cytoscape({
@@ -161,6 +111,7 @@ function ServiceGraph() {
               .layout({
                 name: "fcose",
                 idealEdgeLength: () => 200,
+                // fit: false,
               } as any)
               .run();
           },
@@ -288,6 +239,48 @@ function ServiceGraph() {
           // wheelSensitivity: 0.2,
           container: serviceGraphContainerElement.current,
         });
+
+        const fetchNodeById = (nodeId: string) => {
+          return data?.nodes.find((node: Node) => node.node_id === nodeId);
+        };
+
+        graph.current.on("tap", function (evt) {
+          if (evt.target === graph.current) {
+            setDetails(undefined);
+          }
+        });
+
+        graph.current.on("tap", "node", function (evt) {
+          const node = evt.target;
+
+          const result = fetchNodeById(node.id());
+
+          if (result) {
+            setDetails({
+              type: "node",
+              payload: result,
+            });
+          }
+        });
+
+        graph.current.on("tap", "edge", function (evt) {
+          const edge = evt.target as cytoscape.EdgeSingularTraversing;
+
+          const result = data?.edges.find(
+            (data) =>
+              data.from_node_id === edge.source().id() &&
+              data.to_node_id === edge.target().id()
+          );
+
+          if (result) {
+            setDetails({
+              type: "edge",
+              payload: result,
+              source: fetchNodeById(result.from_node_id),
+              destination: fetchNodeById(result.to_node_id),
+            });
+          }
+        });
       }
     } catch (error) {
       console.error(error);
@@ -315,66 +308,9 @@ function ServiceGraph() {
     return <Container>No Service Graph Data.</Container>;
   }
 
-  const processedData = processServiceGraphData(data);
-
-  const fetchNodeById = (nodeId: string) => {
-    return processedData.nodes.find((node) => node.id === nodeId);
-  };
-
-  const onClickNode = function (nodeId: string) {
-    console.log(`Clicked node ${nodeId}`);
-
-    const results = fetchNodeById(nodeId);
-
-    if (!results) {
-      return;
-    }
-
-    setDetails({
-      type: "node",
-      payload: results,
-    });
-  };
-
-  const onClickLink = function (source: string, target: string) {
-    console.log(`Clicked link between ${source} and ${target}`);
-
-    const results = processedData.links.find(
-      (edge) => edge.source === source && edge.target === target
-    );
-
-    if (!results) {
-      return;
-    }
-
-    setDetails({
-      type: "edge",
-      payload: results,
-      source: fetchNodeById(results.from_node_id),
-      destination: fetchNodeById(results.to_node_id),
-    });
-  };
-
   return (
     <React.Fragment>
       <Container ref={serviceGraphContainerElement} />
-      <Container style={{ display: "none" }}>
-        <ReactD3Graph.Graph
-          key="service-graph"
-          id="service-graph"
-          data={processedData}
-          config={
-            {
-              ...myConfig,
-              width: Math.max(windowSize.width ?? 800, 800),
-              height: Math.max((windowSize.height ?? 400) - 200, 400),
-            } as any
-          }
-          onClickNode={onClickNode}
-          onClickLink={onClickLink}
-        />
-      </Container>
-
       <DetailsPanel>
         <Details details={details} />
       </DetailsPanel>
@@ -401,7 +337,9 @@ function Details(props: { details: DetailsPayload | undefined }) {
   if (!details) {
     return (
       <div>
-        <i>Click on a node or edge view its details.</i>
+        <i>
+          Click on a node (service / transaction) or edge to view its details.
+        </i>
       </div>
     );
   }
@@ -430,14 +368,18 @@ function Details(props: { details: DetailsPayload | undefined }) {
 
 const Container = styled.div`
   ${tw`rounded shadow-lg bg-white`};
+  position: absolute;
   width: 100vw;
-  height: 70vh;
+  height: 100vh;
   outline: 1px solid red;
 `;
 
 const DetailsPanel = styled.div`
-  width: 800px;
-  ${tw`rounded bg-white mt-4 p-4`};
+  width: 500px;
+  ${tw`rounded bg-gray-100 p-4`};
+  position: absolute;
+  top: 8px;
+  left: 8px;
 `;
 
 export default ServiceGraph;
