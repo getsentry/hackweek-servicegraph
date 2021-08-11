@@ -35,3 +35,8 @@ export type NodeActivity = {
 export type ActiveNodes = {
   nodes: Array<NodeActivity>;
 };
+
+export type ServiceMapPayload = {
+  graph: Graph;
+  active_nodes: ActiveNodes;
+};

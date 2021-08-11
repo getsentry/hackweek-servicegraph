@@ -16,6 +16,7 @@ import {
   CombinedEdge,
   NodeType,
   ActiveNodes,
+  ServiceMapPayload,
 } from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
@@ -59,8 +60,8 @@ const fetchServiceGraph =
     nodeSources: Set<NodeType>;
     nodeTargets: Set<NodeType>;
   }) =>
-  (): Promise<Graph> => {
-    return fetch("http://127.0.0.1:8000/graph", {
+  (): Promise<ServiceMapPayload> => {
+    return fetch("http://127.0.0.1:8000/service-map", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -956,14 +957,16 @@ function FetchData() {
     });
   };
 
-  const { isLoading, error, data, refetch } = useQuery<Graph, Error>(
-    "serviceGraph",
-    fetchServiceGraph({ nodeSources, nodeTargets }),
-    {
-      // Refetch the data every second
-      refetchInterval: 1000,
-    }
-  );
+  const { isLoading, error, data, refetch } = useQuery<
+    ServiceMapPayload,
+    Error
+  >("serviceGraph", fetchServiceGraph({ nodeSources, nodeTargets }), {
+    // Refetch the data every second
+    refetchInterval: 1000,
+  });
+
+  console.log("data", data);
+  // const activeNodesQuery = useQuery('activeNodes', fetchActiveNodes());
 
   if (isLoading) {
     return (
@@ -1018,7 +1021,7 @@ function FetchData() {
 
   return (
     <ServiceGraphView
-      data={data}
+      data={data.graph}
       nodeSources={nodeSources}
       toggleNodeSource={toggleNodeSource}
       nodeTargets={nodeTargets}
