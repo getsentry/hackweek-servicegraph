@@ -1,7 +1,7 @@
 import React from "react";
 import cytoscape from "cytoscape";
 // @ts-expect-error
-import fcose from "cytoscape-fcose";
+import cytoscapeCola from "cytoscape-cola";
 import styled from "styled-components";
 import { useQuery } from "react-query";
 import tw from "twin.macro";
@@ -123,7 +123,7 @@ function ServiceGraph() {
         if (graph.current?.destroyed()) {
           console.log("graph destroyed; recreating");
         }
-        cytoscape.use(fcose);
+        cytoscape.use(cytoscapeCola);
 
         let nodes: cytoscape.NodeDefinition[] = [];
         let edges: cytoscape.EdgeDefinition[] = [];
@@ -141,14 +141,26 @@ function ServiceGraph() {
             if (!core) {
               return;
             }
-            core
-              .layout({
-                name: "fcose",
-                idealEdgeLength: () => 200,
-                // fit: false,
-              } as any)
-              .run();
+            // core
+            //   .layout({
+            //     name: "cola",
+            //     nodeSpacing: function () {
+            //       return 50;
+            //     },
+            //     // flow: { axis: "x", minSeparation: 300 },
+            //     // idealEdgeLength: () => 200,
+            //     // fit: false,
+            //   } as any)
+            //   .run();
           },
+          layout: {
+            name: "cola",
+            nodeSpacing: function () {
+              return 100;
+            },
+            flow: { axis: "y", minSeparation: 100 },
+            fit: false,
+          } as any,
           elements: {
             nodes: [
               ...nodes,
