@@ -8,9 +8,15 @@ import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
 
+// https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
-cytoscapeNavigator(cytoscape);
+
+try {
+  cytoscapeNavigator(cytoscape);
+} catch (_) {
+  // catch navigator already registered error on hot reload
+}
 
 type DetailsPayload =
   | {
