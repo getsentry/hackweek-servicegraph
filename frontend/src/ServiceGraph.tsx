@@ -9,7 +9,7 @@ import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
 
-import { Uuid, Graph, Node, CombinedEdge } from "./types";
+import { Uuid, Graph, Node, CombinedEdge, NodeType } from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
@@ -44,18 +44,21 @@ type DetailsPayload =
       destination: Uuid;
     };
 
-function fetchServiceGraph(): Promise<Graph> {
-  return fetch("http://127.0.0.1:8000/graph", {
-    method: "POST",
-    mode: "cors",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      project_id: 1,
-    }),
-  }).then((res) => res.json());
-}
+const fetchServiceGraph =
+  ({ nodeSources }: { nodeSources: Set<string> }) =>
+  (): Promise<Graph> => {
+    return fetch("http://127.0.0.1:8000/graph", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        project_id: 1,
+        from_types: Array.from(nodeSources),
+      }),
+    }).then((res) => res.json());
+  };
 
 function isUnhealthy(
   ok: number,
@@ -165,11 +168,17 @@ const DetailsPanel = styled.div`
 const ButtonLink = styled.a`
   ${tw`whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700`};
 `;
+const ToggleLink = styled.a<{ toggleOn: boolean }>`
+  ${tw`whitespace-nowrap inline-flex items-center justify-center px-1 py-1 border rounded-md shadow-sm text-xs font-medium text-white `};
 
-// TODO: remove
-// function isNodeEqual(current: Node, other: Node): boolean {
-//   return current.node_id === other.node_id;
-// }
+  ${(p) => {
+    if (p.toggleOn) {
+      return tw`border-transparent bg-blue-600 hover:bg-blue-700`;
+    }
+
+    return tw`bg-white text-blue-700 border-blue-700 hover:bg-blue-100`;
+  }}
+`;
 
 function getEdgeKeyWithSourceTarget(source: string, target: string): string {
   return `${source}:${target}`;
@@ -192,7 +201,6 @@ function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
       )
         ? "unhealthy"
         : null,
-
     },
   };
 }
@@ -216,6 +224,8 @@ function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
 
 type Props = {
   data: Graph;
+  nodeSources: Set<NodeType>;
+  toggleNodeSource: (nodeType: NodeType) => void;
 };
 
 type GraphReference = {
@@ -230,6 +240,7 @@ type State = {
   staging: {
     add: GraphReference;
     remove: GraphReference;
+    previousNodes: Map<Uuid, Node>;
     previousEdges: Map<string, CombinedEdge>;
   };
   committed: GraphReference;
@@ -250,6 +261,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(),
         edges: new Set(),
       },
+      previousNodes: new Map(),
       previousEdges: new Map(),
     },
     committed: {
@@ -279,6 +291,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(),
         edges: new Set(),
       },
+      previousNodes: prevState.nodes,
       previousEdges: prevState.edges,
     };
 
@@ -570,6 +583,7 @@ class ServiceGraphView extends React.Component<Props, State> {
             nodes: new Set(),
             edges: new Set(),
           },
+          previousNodes: new Map(),
           previousEdges: new Map(),
         },
         committed,
@@ -621,9 +635,10 @@ class ServiceGraphView extends React.Component<Props, State> {
       };
 
       // Removal of any nodes that are parents (i.e. has children) will also delete their children.
-      // We set parents of nodes to be removed to be null.
+      // We set parents of nodes to be removed to be null, and the parents of their children to be null.
       this.state.staging.remove.nodes.forEach((node_id) => {
         this.graph?.nodes(`[id = '${node_id}']`).move({ parent: null });
+        this.graph?.nodes(`[parent = '${node_id}']`).move({ parent: null });
       });
 
       this.state.staging.remove.nodes.forEach((node_id) => {
@@ -641,7 +656,22 @@ class ServiceGraphView extends React.Component<Props, State> {
         // console.log("graph nodes (before delete)", prevLength);
         committed.nodes.delete(node_id);
 
-        // console.log("deleting", node_id);
+        // console.log(
+        //   `number of ${node_id} nodes`,
+        //   this.graph?.nodes(`[id = '${node_id}']`).toArray().length
+        // );
+
+        // console.log(
+        //   "num of children for ",
+        //   node_id,
+        //   this.graph?.nodes(`[parent = '${node_id}']`).toArray().length
+        // );
+
+        // console.log(
+        //   "deleting",
+        //   node_id,
+        //   this.state.staging.previousNodes.get(node_id)
+        // );
         this.graph?.remove(`node[id = '${node_id}']`);
 
         const afterLength = this.graph?.nodes().toArray().length ?? 0;
@@ -699,6 +729,7 @@ class ServiceGraphView extends React.Component<Props, State> {
             nodes: new Set(),
             edges: new Set(),
           },
+          previousNodes: new Map(),
           previousEdges: new Map(),
         },
         committed,
@@ -754,21 +785,90 @@ class ServiceGraphView extends React.Component<Props, State> {
   };
 
   render() {
+    const { toggleNodeSource, nodeSources } = this.props;
+
     return (
       <React.Fragment>
         <Container ref={this.serviceGraphContainerElement} />
         <DetailsPanel>
           <Details details={this.getDetails()} />
         </DetailsPanel>
+        <Controls>
+          <div className="grid grid-flow-col auto-cols-min gap-2 items-center">
+            <div>
+              <strong>Nodes</strong>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
+            <div>
+              <strong>Source</strong>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeSources.has("transaction")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleNodeSource("transaction");
+                }}
+              >
+                Transactions
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeSources.has("service")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleNodeSource("service");
+                }}
+              >
+                Services
+              </ToggleLink>
+            </div>
+          </div>
+
+          <hr className="m-2" />
+        </Controls>
       </React.Fragment>
     );
   }
 }
 
+const Controls = styled.div`
+  width: 500px;
+  ${tw`rounded bg-gray-100 p-4`};
+  position: absolute;
+  top: 8px;
+  right: 8px;
+`;
+
 function FetchData() {
+  const [nodeSources, setNodeSources] = React.useState<Set<NodeType>>(
+    new Set(["transaction", "service"] as NodeType[])
+  );
+
+  const toggleNodeSource = (nodeType: NodeType) => {
+    setNodeSources((prevState) => {
+      const nextState = new Set(prevState);
+      if (prevState.has(nodeType)) {
+        nextState.delete(nodeType);
+      } else {
+        nextState.add(nodeType);
+      }
+
+      if (nextState.size === 0) {
+        return new Set(["transaction", "service"] as NodeType[]);
+      }
+
+      return nextState;
+    });
+  };
+
   const { isLoading, error, data, refetch } = useQuery<Graph, Error>(
     "serviceGraph",
-    fetchServiceGraph,
+    fetchServiceGraph({ nodeSources }),
     {
       // Refetch the data every second
       refetchInterval: 1000,
@@ -826,7 +926,13 @@ function FetchData() {
     );
   }
 
-  return <ServiceGraphView data={data} />;
+  return (
+    <ServiceGraphView
+      data={data}
+      nodeSources={nodeSources}
+      toggleNodeSource={toggleNodeSource}
+    />
+  );
 }
 
 function ServiceGraph() {
