@@ -91,61 +91,24 @@ fn get_node_filter(types: &BTreeSet<NodeType>, field: &str) -> Result<String, Er
     Ok(filter)
 }
 
-fn get_edge_filter(edge_statuses: &BTreeSet<EdgeStatus>) -> Result<String, Error> {
-    // THIS DOES NOT WORK!
+fn get_edge_post_filter(edge_statuses: &BTreeSet<EdgeStatus>) -> Result<String, Error> {
     let mut filter = String::new();
     if !edge_statuses.is_empty() {
         filter.push('(');
         for (idx, es) in edge_statuses.iter().enumerate() {
             if idx > 0 {
-                filter.push_str(" AND ");
+                filter.push_str(" OR ");
             }
             let clause = match es {
-                EdgeStatus::Ok => "edges.status_ok > 0",
-                EdgeStatus::ExpectedError => "edges.status_expected_error > 0",
-                EdgeStatus::UnexpectedError => "edges.status_unexpected_error > 0",
+                EdgeStatus::Ok => "t.status_ok > 0",
+                EdgeStatus::ExpectedError => "t.status_expected_error > 0",
+                EdgeStatus::UnexpectedError => "t.status_unexpected_error > 0",
             };
             filter.push_str(clause);
         }
         filter.push(')');
     }
     Ok(filter)
-}
-
-fn is_node_status_requested(edge_statuses: &BTreeSet<EdgeStatus>, n: &NodeWithStatus) -> bool {
-    match edge_statuses.is_empty() {
-        true => true,
-        false => {
-            let mut res = true;
-            for status in edge_statuses.iter() {
-                res = res
-                    & match status {
-                        EdgeStatus::Ok => n.status_ok > 0,
-                        EdgeStatus::ExpectedError => n.status_expected_error > 0,
-                        EdgeStatus::UnexpectedError => n.status_unexpected_error > 0,
-                    };
-            }
-            res
-        }
-    }
-}
-
-fn is_edge_status_requested(edge_statuses: &BTreeSet<EdgeStatus>, ce: &CombinedEdge) -> bool {
-    match edge_statuses.is_empty() {
-        true => true,
-        false => {
-            let mut res = true;
-            for status in edge_statuses.iter() {
-                res = res
-                    & match status {
-                        EdgeStatus::Ok => ce.status_ok > 0,
-                        EdgeStatus::ExpectedError => ce.status_expected_error > 0,
-                        EdgeStatus::UnexpectedError => ce.status_unexpected_error > 0,
-                    };
-            }
-            res
-        }
-    }
 }
 
 fn and_if_filter(filter: &String) -> &str {
@@ -170,9 +133,9 @@ pub async fn query_graph(
 
     let from_node_filter = get_node_filter(&params.from_types, "from_node.node_type")?;
     let to_node_filter = get_node_filter(&params.to_types, "to_node.node_type")?;
-    let block = client
-        .query(&format!(
-            r#"
+    let edge_post_filter = get_edge_post_filter(&params.edge_statuses)?;
+    let base_query = format!(
+        r#"
         SELECT
             edges.from_node_id as from_node_id,
             from_node.name as from_node_name,
@@ -208,13 +171,43 @@ pub async fn query_graph(
             to_node_name,
             to_node_type,
             to_node_parent_id"#,
-            project_id = params.project_id,
-            start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
-            to_node_filter_and = and_if_filter(&to_node_filter),
-            to_node_filter = to_node_filter,
-            from_node_filter_and = and_if_filter(&from_node_filter),
-            from_node_filter = from_node_filter,
+        project_id = params.project_id,
+        start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+        end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+        to_node_filter_and = and_if_filter(&to_node_filter),
+        to_node_filter = to_node_filter,
+        from_node_filter_and = and_if_filter(&from_node_filter),
+        from_node_filter = from_node_filter,
+    );
+
+    let block = client
+        .query(&format!(
+            r#"
+                SELECT
+                    t.from_node_id as from_node_id,
+                    t.from_node_name as from_node_name,
+                    t.from_node_type as from_node_type,
+                    t.from_node_parent_id as from_node_parent_id,
+                    t.from_node_description as from_node_description,
+                    t.to_node_id as to_node_id,
+                    t.to_node_name as to_node_name,
+                    t.to_node_type as to_node_type,
+                    t.to_node_parent_id as to_node_parent_id,
+                    t.to_node_description as to_node_description,
+                    t.edge_description as edge_description,
+                    t.status_ok as status_ok,
+                    t.status_expected_error as status_expected_error,
+                    t.status_unexpected_error as status_unexpected_error
+                FROM
+                    ({base_query}) AS t
+                {where_clause}
+                "#,
+            base_query = base_query,
+            where_clause = if !edge_post_filter.is_empty() {
+                format!("WHERE {}", edge_post_filter)
+            } else {
+                String::from("")
+            }
         ))
         .fetch_all()
         .await?;
@@ -236,9 +229,7 @@ pub async fn query_graph(
             status_expected_error: status_expected_error,
             status_unexpected_error: status_unexpected_error,
         };
-        if is_edge_status_requested(&params.edge_statuses, &edge) {
-            edges.push(edge);
-        }
+        edges.push(edge);
 
         let from_node = node_from_row(&row, "from_")?;
         nodes.insert(from_node.node_id, from_node);
@@ -265,9 +256,7 @@ pub async fn query_graph(
             status_expected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).1,
             status_unexpected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).2,
         };
-        if is_node_status_requested(&params.edge_statuses, &node_with_status) {
-            nodes_with_status.insert(node_id, node_with_status);
-        }
+        nodes_with_status.insert(node_id, node_with_status);
     }
 
     Ok(Graph {
