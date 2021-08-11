@@ -194,3 +194,14 @@ pub struct ServiceMap {
     pub graph: Graph,
     pub active_nodes: ActiveNodes,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Histogram {
+    pub buckets: Vec<Bucket>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Bucket {
+    pub ts: DateTime<Utc>,
+    pub n: u64,
+}

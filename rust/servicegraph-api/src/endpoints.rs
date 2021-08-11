@@ -5,7 +5,7 @@ use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
-    ActiveNodes, Edge, Graph, GraphQueryParams, Node, NodeQueryParams, ServiceMap,
+    ActiveNodes, Bucket, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node, NodeQueryParams, ServiceMap,
     ServiceMapQueryParams,
 };
 
@@ -60,4 +60,14 @@ pub async fn query_service_map(
         graph,
         active_nodes,
     }))
+}
+
+#[post("/histogram", format = "json", data = "<params>")]
+pub async fn query_histogram(
+    params: Json<CommonQueryParams>,
+) -> Result<Json<Histogram>, ApiError> {
+    let mut client = get_client().await?;
+
+
+    Ok(Json(db::query_histogram(&mut client, &params).await?))
 }

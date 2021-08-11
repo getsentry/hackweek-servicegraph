@@ -31,6 +31,7 @@ fn rocket() -> _ {
                 endpoints::submit,
                 endpoints::query_graph,
                 endpoints::query_active_nodes,
+                endpoints::query_histogram,
                 endpoints::query_service_map,
                 endpoints::health
             ],

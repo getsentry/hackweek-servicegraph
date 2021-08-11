@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::error::Error;
 use crate::payloads::{
-    ActiveNodes, CombinedEdge, CommonQueryParams, Edge, EdgeStatus, Graph, GraphQueryParams, Node,
+    ActiveNodes, Bucket, CombinedEdge, CommonQueryParams, Edge, EdgeStatus, Graph, GraphQueryParams, Histogram, Node,
     NodeActivity, NodeQueryParams, NodeType, NodeWithStatus,
 };
 
@@ -334,6 +334,47 @@ pub async fn query_active_nodes(
 
     Ok(ActiveNodes { nodes })
 }
+
+
+pub async fn query_histogram(
+    client: &mut ClientHandle,
+    params: &CommonQueryParams,
+) -> Result<Histogram, Error> {
+    let (start_date_bound, end_date_bound) = default_date_range(params);
+    let block = client
+        .query(&format!(
+            r#"
+            SELECT
+                ts,
+                plus(plus(sumIfMerge(status_ok), sumIfMerge(status_expected_error)), sumIfMerge(status_unexpected_error)) as count
+            FROM edges_by_minute
+            WHERE project_id = {project_id}
+            AND ts >= toDateTime('{start_date}')
+            AND ts <= toDateTime('{end_date}')
+            GROUP BY ts
+            ORDER BY ts
+            WITH FILL
+                FROM toDateTime('{start_date}')
+                TO toDateTime('{end_date}')
+                STEP 60
+            "#,
+            project_id = params.project_id,
+            start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
+            end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
+        ))
+        .fetch_all()
+        .await?;
+
+    let mut buckets = Vec::new();
+
+    for row in block.rows() {
+        let ts: DateTime<Tz> = row.get("ts")?;
+        buckets.push(Bucket{ts: ts.with_timezone(&Utc), n: row.get("count")?});
+    }
+
+    Ok(Histogram { buckets: buckets})
+}
+
 
 #[cfg(test)]
 mod tests {
