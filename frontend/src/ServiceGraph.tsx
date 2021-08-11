@@ -157,8 +157,12 @@ const ButtonLink = styled.a`
 //   return current.node_id === other.node_id;
 // }
 
+function getEdgeKeyWithSourceTarget(source: string, target: string): string {
+  return `${source}:${target}`;
+}
+
 function getEdgeKey(edge: CombinedEdge): string {
-  return `${edge.from_node_id}:${edge.to_node_id}`;
+  return getEdgeKeyWithSourceTarget(edge.from_node_id, edge.to_node_id);
 }
 
 function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
@@ -207,6 +211,8 @@ type State = {
     previousEdges: Map<string, CombinedEdge>;
   };
   committed: GraphReference;
+
+  details: DetailsPayload | undefined;
 };
 
 class ServiceGraphView extends React.Component<Props, State> {
@@ -228,6 +234,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       nodes: new Set(),
       edges: new Set(),
     },
+    details: undefined,
   };
 
   serviceGraphContainerElement = React.createRef<HTMLDivElement>();
@@ -464,6 +471,48 @@ class ServiceGraphView extends React.Component<Props, State> {
       // @ts-expect-error
       this.minimap = this.graph.navigator();
 
+      this.graph.on("tap", (event) => {
+        if (event.target === this.graph) {
+          this.setState({
+            details: undefined,
+          });
+        }
+      });
+
+      this.graph.on("tap", "node", (event) => {
+        const node = event.target as cytoscape.SingularData;
+
+        const result = this.state.nodes.get(node.id());
+
+        if (result) {
+          this.setState({
+            details: {
+              type: "node",
+              payload: result,
+            },
+          });
+        }
+      });
+
+      this.graph.on("tap", "edge", (event) => {
+        const edge = event.target as cytoscape.EdgeSingularTraversing;
+
+        const result = this.state.edges.get(
+          getEdgeKeyWithSourceTarget(edge.source().id(), edge.target().id())
+        );
+
+        if (result) {
+          this.setState({
+            details: {
+              type: "edge",
+              payload: result,
+              source: this.state.nodes.get(result.from_node_id),
+              destination: this.state.nodes.get(result.to_node_id),
+            },
+          });
+        }
+      });
+
       const committed = {
         nodes: new Set(this.state.staging.add.nodes),
         edges: new Set(this.state.staging.add.edges),
@@ -650,7 +699,14 @@ class ServiceGraphView extends React.Component<Props, State> {
   }
 
   render() {
-    return <Container ref={this.serviceGraphContainerElement} />;
+    return (
+      <React.Fragment>
+        <Container ref={this.serviceGraphContainerElement} />
+        <DetailsPanel>
+          <Details details={this.state.details} />
+        </DetailsPanel>
+      </React.Fragment>
+    );
   }
 }
 
