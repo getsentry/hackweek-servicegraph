@@ -33,6 +33,29 @@ function fetchServiceGraph(): Promise<Graph> {
   }).then((res) => res.json());
 }
 
+function isUnhealthy(ok: number, expectedError: number, unexpectedError: number): boolean {
+  const expectedErrorThreshold = 0.99;
+  const unexpectedErrorThreshold = 0.9999;
+
+  if (ok === 0 && expectedError === 0 && unexpectedError === 0) {
+    return false;
+  }
+
+  if (ok === 0) {
+    return true;
+  }
+
+  if ((ok / (ok + expectedError)) < expectedErrorThreshold) {
+    return true;
+  }
+
+  if((ok / (ok + unexpectedError)) < unexpectedErrorThreshold) {
+    return true;
+  }
+
+  return false;
+}
+
 // Convert service graph data into the format that cytoscape lib can consume
 function processServiceGraphData(serviceGraphData: Graph) {
   const nodes = serviceGraphData.nodes.map((node): cytoscape.NodeDefinition => {
@@ -41,7 +64,7 @@ function processServiceGraphData(serviceGraphData: Graph) {
         ...node,
         id: node.node_id,
         parent: node.parent_id,
-      },
+       },
     };
   });
 
@@ -51,7 +74,8 @@ function processServiceGraphData(serviceGraphData: Graph) {
         ...edge,
         source: edge.from_node_id,
         target: edge.to_node_id,
-      },
+        group: isUnhealthy(edge.status_ok, edge.status_expected_error, edge.status_unexpected_error) ? "unhealthy" : null,
+       },
     };
   });
 
@@ -166,7 +190,6 @@ function ServiceGraph() {
                 "text-valign": "bottom",
               },
             },
-
             {
               selector: "edge",
               style: {
@@ -175,7 +198,13 @@ function ServiceGraph() {
                 "target-arrow-shape": "triangle",
               },
             },
-
+            {
+              selector: "edge[group=\"unhealthy\"]",
+              style: {
+                "line-color": "#ff0000",
+                "target-arrow-color": "#ff0000",
+              },
+            },
             {
               selector: "node:selected",
               style: {
@@ -233,6 +262,7 @@ function ServiceGraph() {
               selector: "edge:selected",
               style: {
                 "line-color": "#33ff00",
+                "target-arrow-color": "#33ff00",
               },
             },
           ],
