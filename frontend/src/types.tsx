@@ -40,3 +40,5 @@ export type ServiceMapPayload = {
   graph: Graph;
   active_nodes: ActiveNodes;
 };
+
+export type EdgeStatus = "ok" | "unexpected_error" | "expected_error";
