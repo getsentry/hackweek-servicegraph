@@ -59,7 +59,7 @@ def create_main():
             resp = requests.post(to_url("shop/"), json=req)
             return from_response(resp)
         elif request_type == "pay":
-            resp = requests.post(to_url("pay/"), json=req)
+            resp = requests.post(to_url("payment/"), json=req)
             return from_response(resp)
         else:
             return f"Invalid request type", 400
@@ -86,7 +86,27 @@ def create_payment():
     @app.route('/', methods=["POST", "PUT"])
     def payment():
         _log.debug("in payment")
-        return 'Hello Payment!'
+
+        try:
+            req = request.json
+        except:
+            _log.debug("create authentication bad request")
+            return "invalid request", 400
+
+        payment_provider = str(req.get("payment_provider")).lower()
+
+        providers = [x.lower() for x in payment_providers()]
+
+        if payment_provider not in providers:
+            _log.debug(f"invalid payment provider {payment_provider}")
+            return "invalid authenticator provider", 400
+
+        pay_url = to_url(f"pay/{payment_provider}")
+
+        resp = requests.post(pay_url, req)
+        return from_response(resp)
+
+
 
     return app
 
