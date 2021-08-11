@@ -33,7 +33,11 @@ function fetchServiceGraph(): Promise<Graph> {
   }).then((res) => res.json());
 }
 
-function isUnhealthy(ok: number, expectedError: number, unexpectedError: number): boolean {
+function isUnhealthy(
+  ok: number,
+  expectedError: number,
+  unexpectedError: number
+): boolean {
   const expectedErrorThreshold = 0.99;
   const unexpectedErrorThreshold = 0.9999;
 
@@ -45,11 +49,11 @@ function isUnhealthy(ok: number, expectedError: number, unexpectedError: number)
     return true;
   }
 
-  if ((ok / (ok + expectedError)) < expectedErrorThreshold) {
+  if (ok / (ok + expectedError) < expectedErrorThreshold) {
     return true;
   }
 
-  if((ok / (ok + unexpectedError)) < unexpectedErrorThreshold) {
+  if (ok / (ok + unexpectedError) < unexpectedErrorThreshold) {
     return true;
   }
 
@@ -64,7 +68,7 @@ function processServiceGraphData(serviceGraphData: Graph) {
         ...node,
         id: node.node_id,
         parent: node.parent_id,
-       },
+      },
     };
   });
 
@@ -74,8 +78,14 @@ function processServiceGraphData(serviceGraphData: Graph) {
         ...edge,
         source: edge.from_node_id,
         target: edge.to_node_id,
-        group: isUnhealthy(edge.status_ok, edge.status_expected_error, edge.status_unexpected_error) ? "unhealthy" : null,
-       },
+        group: isUnhealthy(
+          edge.status_ok,
+          edge.status_expected_error,
+          edge.status_unexpected_error
+        )
+          ? "unhealthy"
+          : null,
+      },
     };
   });
 
@@ -199,7 +209,7 @@ function ServiceGraph() {
               },
             },
             {
-              selector: "edge[group=\"unhealthy\"]",
+              selector: 'edge[group="unhealthy"]',
               style: {
                 "line-color": "#ff0000",
                 "target-arrow-color": "#ff0000",

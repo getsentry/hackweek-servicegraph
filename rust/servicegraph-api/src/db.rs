@@ -107,7 +107,7 @@ pub async fn query_graph(
     let (start_date_bound, end_date_bound) = default_date_range(params);
 
     let from_node_filter = get_node_filter(&params.from_types, "from_node.node_type")?;
-    let to_node_filter = get_node_filter(&params.to_types, "to_node.mode_type")?;
+    let to_node_filter = get_node_filter(&params.to_types, "to_node.node_type")?;
 
     let block = client
         .query(&format!(
