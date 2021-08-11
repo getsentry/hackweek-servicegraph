@@ -6,14 +6,16 @@ import cytoscape from "cytoscape";
 // @ts-expect-error
 import cytoscapeCola from "cytoscape-cola";
 import tw from "twin.macro";
+import _ from "lodash";
 
-import { Graph, Node, CombinedEdge } from "./types";
+import { Uuid, Graph, Node, CombinedEdge } from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
 try {
+  cytoscape.use(cytoscapeCola);
   cytoscapeNavigator(cytoscape);
 } catch (_) {
   // catch navigator already registered error on hot reload
@@ -459,13 +461,327 @@ const ButtonLink = styled.a`
   ${tw`whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700`};
 `;
 
+// TODO: remove
+// function isNodeEqual(current: Node, other: Node): boolean {
+//   return current.node_id === other.node_id;
+// }
+
+function getEdgeKey(edge: CombinedEdge): string {
+  return `${edge.from_node_id}:${edge.to_node_id}`;
+}
+
+function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
+  return {
+    data: {
+      ...node,
+      id: node.node_id,
+      parent: node.parent_id,
+    },
+  };
+}
+
+function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
+  return {
+    data: {
+      ...edge,
+      source: edge.from_node_id,
+      target: edge.to_node_id,
+      group: isUnhealthy(
+        edge.status_ok,
+        edge.status_expected_error,
+        edge.status_unexpected_error
+      )
+        ? "unhealthy"
+        : null,
+    },
+  };
+}
+
 type Props = {
   data: Graph;
 };
 
-class ServiceGraphView extends React.Component<Props> {
+type GraphReference = {
+  nodes: Set<string>;
+  edges: Set<string>;
+};
+
+type State = {
+  nodes: Map<Uuid, Node>;
+  edges: Map<string, CombinedEdge>;
+
+  staging: {
+    add: GraphReference;
+    remove: GraphReference;
+  };
+  committed: GraphReference;
+};
+
+class ServiceGraphView extends React.Component<Props, State> {
+  state: State = {
+    nodes: new Map(),
+    edges: new Map(),
+    staging: {
+      add: {
+        nodes: new Set(),
+        edges: new Set(),
+      },
+      remove: {
+        nodes: new Set(),
+        edges: new Set(),
+      },
+    },
+    committed: {
+      nodes: new Set(),
+      edges: new Set(),
+    },
+  };
+
+  serviceGraphContainerElement = React.createRef<HTMLDivElement>();
+  graph: cytoscape.Core | undefined = undefined;
+  minimap: any = undefined;
+
+  static getDerivedStateFromProps(props: Props, prevState: State): State {
+    const { data } = props;
+
+    console.log("data", data);
+
+    const nodesMap: Map<Uuid, Node> = new Map();
+    const edgesMap: Map<string, CombinedEdge> = new Map();
+
+    const staging: State["staging"] = {
+      add: {
+        nodes: new Set(),
+        edges: new Set(),
+      },
+      remove: {
+        nodes: new Set(),
+        edges: new Set(),
+      },
+    };
+
+    // add any new nodes and mark stale nodes to be removed from the cytoscape graph
+
+    data.nodes.forEach((node) => {
+      // update nodes dictionary with latest node information
+      nodesMap.set(node.node_id, node);
+
+      // assume node is new; if it is not new, then it'll be removed from staging
+      // when prevState.committed.nodes is traversed
+      staging.add.nodes.add(node.node_id);
+    });
+
+    prevState.committed.nodes.forEach((node_id) => {
+      if (!staging.add.nodes.has(node_id)) {
+        // mark this node to be removed
+        staging.remove.nodes.add(node_id);
+        return;
+      }
+
+      // node is already on the graph; remove it from staging
+      staging.add.nodes.delete(node_id);
+    });
+
+    // add any new edges and mark stale edges to be removed from the cytoscape graph
+
+    data.edges.forEach((edge) => {
+      const edgeKey = getEdgeKey(edge);
+      // update edges dictionary with latest edge information
+      edgesMap.set(edgeKey, edge);
+
+      // assume edge is new; if it is not new, then it'll be removed from staging
+      // when prevState.committed.edges is traversed
+      staging.add.edges.add(edgeKey);
+    });
+
+    prevState.committed.edges.forEach((edge_key) => {
+      if (!staging.add.edges.has(edge_key)) {
+        // mark this edge to be removed
+        staging.remove.edges.add(edge_key);
+        return;
+      }
+
+      // edge is already on the graph; remove it from staging
+      staging.add.edges.delete(edge_key);
+    });
+
+    return {
+      ...prevState,
+      staging,
+      nodes: nodesMap,
+      edges: edgesMap,
+    };
+  }
+
+  shouldComponentUpdate(nextProps: Props) {
+    return _.isEqual(this.props, nextProps);
+  }
+
+  componentDidMount() {
+    if (!this.serviceGraphContainerElement.current) {
+      return;
+    }
+
+    try {
+      if (!(!this.graph || this.graph.destroyed())) {
+        return;
+      }
+
+      const nodes: cytoscape.NodeDefinition[] = [];
+      const edges: cytoscape.EdgeDefinition[] = [];
+
+      console.log("this.state", this.state);
+
+      this.state.staging.add.nodes.forEach((node_id) => {
+        const node = this.state.nodes.get(node_id);
+        if (node) {
+          nodes.push(nodeToCytoscape(node));
+        } else {
+          throw Error(`unable to find node: ${node_id}`);
+        }
+      });
+
+      this.state.staging.add.edges.forEach((edge_key) => {
+        const edge = this.state.edges.get(edge_key);
+        if (edge) {
+          edges.push(edgeToCytoscape(edge));
+        } else {
+          throw Error(`unable to find edge: ${edge_key}`);
+        }
+      });
+
+      this.graph = cytoscape({
+        layout: {
+          name: "cola",
+          nodeSpacing: function () {
+            return 100;
+          },
+          flow: { axis: "y", minSeparation: 100 },
+          fit: false,
+        } as any,
+        minZoom: 0.3,
+        maxZoom: 1,
+        style: [
+          {
+            selector: "node",
+            style: {
+              "background-color": "#bdd3d4",
+              label: "data(name)",
+              "text-valign": "bottom",
+              "background-opacity": 0.7,
+            },
+          },
+
+          {
+            selector: ":parent",
+            style: {
+              "background-color": "#e8e8e8",
+              "border-color": "#DADADA",
+              "text-valign": "bottom",
+            },
+          },
+          {
+            selector: "edge",
+            style: {
+              "line-color": "#bdd3d4",
+              "curve-style": "bezier",
+              "target-arrow-shape": "triangle",
+            },
+          },
+          {
+            selector: 'edge[group="unhealthy"]',
+            style: {
+              "line-color": "#ff0000",
+              "target-arrow-color": "#ff0000",
+            },
+          },
+          {
+            selector: "node:selected",
+            style: {
+              "background-color": "#33ff00",
+              "border-color": "#22ee00",
+            },
+          },
+
+          {
+            selector: "node.fixed",
+            style: {
+              shape: "diamond",
+              "background-color": "#9D9696",
+            },
+          },
+
+          {
+            selector: "node.fixed:selected",
+            style: {
+              "background-color": "#33ff00",
+            },
+          },
+
+          {
+            selector: "node.alignment",
+            style: {
+              shape: "round-heptagon",
+              "background-color": "#fef2d1",
+            },
+          },
+
+          {
+            selector: "node.alignment:selected",
+            style: {
+              "background-color": "#33ff00",
+            },
+          },
+
+          {
+            selector: "node.relative",
+            style: {
+              shape: "rectangle",
+              "background-color": "#fed3d1",
+            },
+          },
+
+          {
+            selector: "node.relative:selected",
+            style: {
+              "background-color": "#33ff00",
+            },
+          },
+
+          {
+            selector: "edge:selected",
+            style: {
+              "line-color": "#33ff00",
+              "target-arrow-color": "#33ff00",
+            },
+          },
+        ],
+        elements: {
+          nodes,
+          edges,
+        },
+        container: this.serviceGraphContainerElement.current,
+      });
+
+      // @ts-expect-error
+      this.minimap = this.graph.navigator();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.graph) {
+      this.graph.destroy();
+    }
+
+    if (this.minimap) {
+      this.minimap.destroy();
+    }
+  }
+
   render() {
-    return <Container>foo</Container>;
+    return <Container ref={this.serviceGraphContainerElement}>foo</Container>;
   }
 }
 
