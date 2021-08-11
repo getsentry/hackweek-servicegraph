@@ -36,13 +36,12 @@ try {
 type DetailsPayload =
   | {
       type: "node";
-      payload: Node;
+      payload: Uuid;
     }
   | {
       type: "edge";
-      payload: CombinedEdge;
-      source: Node | undefined;
-      destination: Node | undefined;
+      source: Uuid;
+      destination: Uuid;
     };
 
 function fetchServiceGraph(): Promise<Graph> {
@@ -98,7 +97,19 @@ function NodeDetails({ node }: { node: Node | undefined }) {
   );
 }
 
-function Details(props: { details: DetailsPayload | undefined }) {
+type DetailsPayloadDereferenced =
+  | {
+      type: "node";
+      payload: Node;
+    }
+  | {
+      type: "edge";
+      payload: CombinedEdge;
+      source: Node;
+      destination: Node;
+    };
+
+function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
   const { details } = props;
 
   if (!details) {
@@ -482,35 +493,24 @@ class ServiceGraphView extends React.Component<Props, State> {
       this.graph.on("tap", "node", (event) => {
         const node = event.target as cytoscape.SingularData;
 
-        const result = this.state.nodes.get(node.id());
-
-        if (result) {
-          this.setState({
-            details: {
-              type: "node",
-              payload: result,
-            },
-          });
-        }
+        this.setState({
+          details: {
+            type: "node",
+            payload: node.id(),
+          },
+        });
       });
 
       this.graph.on("tap", "edge", (event) => {
         const edge = event.target as cytoscape.EdgeSingularTraversing;
 
-        const result = this.state.edges.get(
-          getEdgeKeyWithSourceTarget(edge.source().id(), edge.target().id())
-        );
-
-        if (result) {
-          this.setState({
-            details: {
-              type: "edge",
-              payload: result,
-              source: this.state.nodes.get(result.from_node_id),
-              destination: this.state.nodes.get(result.to_node_id),
-            },
-          });
-        }
+        this.setState({
+          details: {
+            type: "edge",
+            source: edge.source().id(),
+            destination: edge.target().id(),
+          },
+        });
       });
 
       const committed = {
@@ -698,12 +698,49 @@ class ServiceGraphView extends React.Component<Props, State> {
     }
   }
 
+  getDetails = (): DetailsPayloadDereferenced | undefined => {
+    if (!this.state.details) {
+      return undefined;
+    }
+
+    if (this.state.details.type === "node") {
+      const node = this.state.nodes.get(this.state.details.payload);
+      if (node) {
+        return {
+          type: "node",
+          payload: node,
+        };
+      }
+    }
+
+    if (this.state.details.type === "edge") {
+      const { source, destination } = this.state.details;
+      const edge = this.state.edges.get(
+        getEdgeKeyWithSourceTarget(source, destination)
+      );
+
+      const sourceNode = this.state.nodes.get(source);
+      const destinationNode = this.state.nodes.get(destination);
+
+      if (edge && sourceNode && destinationNode) {
+        return {
+          type: "edge",
+          payload: edge,
+          source: sourceNode,
+          destination: destinationNode,
+        };
+      }
+    }
+
+    return undefined;
+  };
+
   render() {
     return (
       <React.Fragment>
         <Container ref={this.serviceGraphContainerElement} />
         <DetailsPanel>
-          <Details details={this.state.details} />
+          <Details details={this.getDetails()} />
         </DetailsPanel>
       </React.Fragment>
     );
