@@ -414,18 +414,18 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node",
             style: {
-              "background-color": "#bdd3d4",
+              "background-color": "#1864ab",
               label: "data(name)",
               "text-valign": "bottom",
-              "background-opacity": 0.7,
+              "background-opacity": 0.9,
             },
           },
 
           {
             selector: ":parent",
             style: {
-              "background-color": "#e8e8e8",
-              "border-color": "#DADADA",
+              "background-color": "#d0ebff",
+              "border-color": "#1864ab",
               "text-valign": "bottom",
             },
           },
@@ -456,6 +456,7 @@ class ServiceGraphView extends React.Component<Props, State> {
             style: {
               "background-color": "#33ff00",
               "border-color": "#22ee00",
+              "background-opacity": 0.7,
             },
           },
 
