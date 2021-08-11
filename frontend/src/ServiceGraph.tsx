@@ -435,7 +435,7 @@ function Details(props: { details: DetailsPayload | undefined }) {
       <strong>Destination</strong>
       <NodeDetails node={destination} />
       <hr />
-      <div>Status: {edge.status_ok}</div>
+      <div>OK: {edge.status_ok}</div>
       <div>Expected Error: {edge.status_expected_error}</div>
       <div>Unexpected Error: {edge.status_unexpected_error}</div>
     </div>
