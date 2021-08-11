@@ -37,6 +37,14 @@ api-server: up
 gen-data: api-server
 	python3 python/sample_data/gen_data.py
 
+start-services:
+	# starts the test server (at 0.0.0.0:8000)
+	. .venv/bin/activate && cd python && python test-apps.py
+
+start-locust:
+	# starts locust (at 0.0.0.0:8089)
+	. .venv/bin/activate && cd python && locust
+
 setup: setup-venv
 .PHONY: setup
 
@@ -48,3 +56,4 @@ setup-venv: .venv/bin/python
 	@which virtualenv || sudo pip install virtualenv
 	virtualenv -p $$PYTHON_VERSION .venv
 	pip install -r requirements.txt
+

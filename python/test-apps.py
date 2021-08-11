@@ -11,8 +11,8 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from provider_names import departments, payment_providers, authentication_providers
 
 _log = logging.getLogger("main")
-REPORTING_PORT = 5000
-APP_PORT = 8000
+REPORTING_PORT = 8000
+APP_PORT = 5000
 SERVICE_NS = uuid.UUID('13f07817-8ccb-4961-8507-1a3e6fd02066')
 minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 

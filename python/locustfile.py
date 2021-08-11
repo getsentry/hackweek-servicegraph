@@ -4,9 +4,9 @@ from locust import HttpUser, task, between
 from provider_names import departments, payment_providers, authentication_providers
 
 
-class HelloWorldUser(HttpUser):
+class Shopper(HttpUser):
     wait_time = between(0.5, 10)
-    host= "http://localhost:8000"
+    host= "http://localhost:5000"
     @task(4)
     def shop(self):
         department = random.choice(departments())
