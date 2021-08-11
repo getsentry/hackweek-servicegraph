@@ -7,10 +7,10 @@ CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     name LowCardinality(String),
     description Nullable(String),
     parent_id Nullable(UUID),
-    timestamp DateTime
-) ENGINE = ReplacingMergeTree(timestamp)
+    ts DateTime
+) ENGINE = ReplacingMergeTree(ts)
 ORDER BY (project_id, node_id)
-TTL timestamp + toIntervalDay(90);
+TTL ts + toIntervalDay(90);
 
 CREATE TABLE IF NOT EXISTS servicegraph.edges (
     project_id UInt64,

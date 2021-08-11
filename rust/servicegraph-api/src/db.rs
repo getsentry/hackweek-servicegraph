@@ -37,7 +37,7 @@ pub async fn register_nodes(
         .column("node_type", colvec!(nodes, |x| x.node_type.as_u8()))
         .column("name", colvec!(nodes, |x| x.name.clone()))
         .column("parent_id", colvec!(nodes, |x| x.parent_id))
-        .column("timestamp", vec![now; nodes.len()]);
+        .column("ts", vec![now; nodes.len()]);
     client.insert("nodes", block).await?;
     Ok(())
 }
@@ -99,13 +99,13 @@ pub async fn query_graph(
             from_node.name as from_node_name,
             from_node.node_type as from_node_type,
             from_node.parent_id as from_node_parent_id,
-            any(from_node.description) as from_node_description,
+            argMax(from_node.description, from_node.ts) as from_node_description,
             edges.to_node_id as to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
             from_node.parent_id as to_node_parent_id,
-            any(to_node.description) as to_node_description,
-            any(edges.description) as edge_description,
+            argMax(to_node.description, to_node.ts) as to_node_description,
+            argMax(edges.description, edges.ts) as edge_description,
             toUInt32(sumIfMerge(edges.status_ok)) as status_ok,
             toUInt32(sumIfMerge(edges.status_expected_error)) as status_expected_error,
             toUInt32(sumIfMerge(edges.status_unexpected_error)) as status_unexpected_error
