@@ -798,9 +798,24 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       committed.nodes.forEach((node_id) => {
         invariant(
-          this.graph?.nodes(`[id = '${node_id}']`).empty(),
-          `expect node to exist in cytoscape graph: ${node_id}`
+          !this.graph?.nodes(`[id = '${node_id}']`).empty(),
+          `componentDidMount: expect node to exist in cytoscape graph: ${node_id}`
         );
+      });
+
+      committed.edges.forEach((edge_key) => {
+        const edge = this.state.edges.get(edge_key);
+        if (edge) {
+          const cytoscapeEdge = edgeToCytoscape(edge);
+          invariant(
+            !this.graph
+              ?.elements(
+                `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
+              )
+              .empty(),
+            `expect edge to exist in cytoscape graph: ${edge}`
+          );
+        }
       });
 
       this.setState({
@@ -824,6 +839,28 @@ class ServiceGraphView extends React.Component<Props, State> {
 
   componentDidUpdate(prevProps: Props, prevState: State) {
     console.log("componentDidUpdate", this.state);
+
+    this.state.committed.nodes.forEach((node_id) => {
+      invariant(
+        !this.graph?.nodes(`[id = '${node_id}']`).empty(),
+        `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
+      );
+    });
+
+    this.state.committed.edges.forEach((edge_key) => {
+      const edge = this.state.edges.get(edge_key);
+      if (edge) {
+        const cytoscapeEdge = edgeToCytoscape(edge);
+        invariant(
+          !this.graph
+            ?.elements(
+              `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
+            )
+            .empty(),
+          `expect edge to exist in cytoscape graph: ${edge}`
+        );
+      }
+    });
 
     const hasNodesToAdd = this.state.staging.add.nodes.size > 0;
     const hasNodesToRemove = this.state.staging.remove.nodes.size > 0;
@@ -872,8 +909,12 @@ class ServiceGraphView extends React.Component<Props, State> {
 
         console.log(this.graph?.nodes(`[id = '${node_id}']`).toArray());
         if (this.graph?.nodes(`[id = '${node_id}']`).empty()) {
-          console.error(`expect node to exist in cytoscape graph: ${node_id}`);
-          // throw Error(`expect node to exist in cytoscape graph: ${node_id}`);
+          // console.error(
+          //   `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
+          // );
+          // throw Error(
+          //   `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
+          // );
         }
 
         committed.nodes.delete(node_id);
