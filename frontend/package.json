@@ -16,6 +16,7 @@
     "cytoscape": "^3.19.0",
     "cytoscape-cola": "^2.5.0",
     "cytoscape-fcose": "^2.1.0",
+    "cytoscape-navigator": "^2.0.1",
     "d3": "5.16.0",
     "husky": "^7.0.1",
     "lint-staged": "^11.1.2",

@@ -8,6 +8,10 @@ import tw from "twin.macro";
 
 import { Graph, Node, CombinedEdge } from "./types";
 
+const cytoscapeNavigator = require("cytoscape-navigator");
+require("cytoscape-navigator/cytoscape.js-navigator.css");
+cytoscapeNavigator(cytoscape);
+
 type DetailsPayload =
   | {
       type: "node";
@@ -117,6 +121,8 @@ function ServiceGraph() {
     if (!serviceGraphContainerElement.current) {
       return;
     }
+
+    let minimap: any = undefined;
 
     try {
       if (!graph.current || graph.current.destroyed()) {
@@ -292,6 +298,9 @@ function ServiceGraph() {
           container: serviceGraphContainerElement.current,
         });
 
+        // @ts-expect-error
+        minimap = graph.current.navigator();
+
         const fetchNodeById = (nodeId: string) => {
           return data?.nodes.find((node: Node) => node.node_id === nodeId);
         };
@@ -339,7 +348,13 @@ function ServiceGraph() {
     }
 
     return () => {
-      graph.current && graph.current.destroy();
+      if (graph.current) {
+        graph.current.destroy();
+      }
+
+      if (minimap) {
+        minimap.destroy();
+      }
     };
   }, [data, error, isLoading]);
 

@@ -4241,6 +4241,11 @@ cytoscape-fcose@^2.1.0:
   dependencies:
     cose-base "^2.0.0"
 
+cytoscape-navigator@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/cytoscape-navigator/-/cytoscape-navigator-2.0.1.tgz#c3b82a5329e5e561d91992f6162ea576c03fa7c4"
+  integrity sha512-csflZi8BaUmEr1f6y2xKg9CufpU18Du9CzwA3ybjISClaJcuKMJkIDHLE3sg6GKOdxBVUcHX6aeR5gjTQ66Z6w==
+
 cytoscape@^3.19.0:
   version "3.19.0"
   resolved "https://registry.yarnpkg.com/cytoscape/-/cytoscape-3.19.0.tgz#b3e3136f823ca00a1c7752741c2a349e52545f57"
