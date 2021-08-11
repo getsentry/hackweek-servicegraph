@@ -30,7 +30,8 @@ fn rocket() -> _ {
             routes![
                 endpoints::submit,
                 endpoints::query_graph,
-                endpoints::query_active_nodes
+                endpoints::query_active_nodes,
+                endpoints::health
             ],
         )
         .mount("/", rocket_cors::catch_all_options_routes())

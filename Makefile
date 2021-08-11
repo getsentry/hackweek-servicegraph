@@ -31,6 +31,12 @@ clickhouse-debug-shell:
 	@$(CLICKHOUSE_SHELL) -d servicegraph --send_logs_level=debug
 .PHONY: clickhouse-debug-shell
 
+api-server: up
+	cd rust/servicegraph-api && cargo run
+
+gen-data: api-server
+	python3 python/sample_data/gen_data.py
+
 setup: setup-venv
 .PHONY: setup
 

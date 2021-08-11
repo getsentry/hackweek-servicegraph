@@ -21,6 +21,11 @@ pub struct QueryParams {
     end_date: Option<DateTime<Utc>>,
 }
 
+#[get("/health")]
+pub fn health() -> String {
+    return String::from("OK");
+}
+
 #[post("/submit", format = "json", data = "<data>")]
 pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
     let mut client = get_client().await?;
