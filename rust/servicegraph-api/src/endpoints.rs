@@ -4,21 +4,13 @@ use serde::{Deserialize, Serialize};
 use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
-use crate::payloads::{ActiveNodes, Edge, Graph, Node};
-use chrono::{DateTime, Utc};
+use crate::payloads::{ActiveNodes, Edge, Graph, Node, QueryParams};
 
 #[derive(Serialize, Deserialize)]
 pub struct SubmitData {
     project_id: u64,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct QueryParams {
-    project_id: u64,
-    start_date: Option<DateTime<Utc>>,
-    end_date: Option<DateTime<Utc>>,
 }
 
 #[get("/health")]
@@ -41,27 +33,11 @@ pub async fn submit(data: Json<SubmitData>) -> Result<String, ApiError> {
 #[post("/graph", format = "json", data = "<params>")]
 pub async fn query_graph(params: Json<QueryParams>) -> Result<Json<Graph>, ApiError> {
     let mut client = get_client().await?;
-    Ok(Json(
-        db::query_graph(
-            &mut client,
-            params.project_id,
-            params.start_date,
-            params.end_date,
-        )
-        .await?,
-    ))
+    Ok(Json(db::query_graph(&mut client, &params).await?))
 }
 
 #[post("/active-nodes", format = "json", data = "<params>")]
 pub async fn query_active_nodes(params: Json<QueryParams>) -> Result<Json<ActiveNodes>, ApiError> {
     let mut client = get_client().await?;
-    Ok(Json(
-        db::query_active_nodes(
-            &mut client,
-            params.project_id,
-            params.start_date,
-            params.end_date,
-        )
-        .await?,
-    ))
+    Ok(Json(db::query_active_nodes(&mut client, &params).await?))
 }

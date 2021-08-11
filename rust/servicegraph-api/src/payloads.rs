@@ -1,6 +1,19 @@
+use std::collections::BTreeSet;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct QueryParams {
+    pub project_id: u64,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub from_types: BTreeSet<NodeType>,
+    #[serde(default)]
+    pub to_types: BTreeSet<NodeType>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -49,7 +62,7 @@ pub struct CombinedEdge {
     pub status_unexpected_error: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeType {
     Service,
