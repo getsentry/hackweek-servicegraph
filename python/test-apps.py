@@ -2,6 +2,7 @@ import minimal
 import uuid
 import requests
 import logging
+import random
 
 from flask import Flask, request
 from werkzeug.serving import run_simple
@@ -20,10 +21,16 @@ def from_response(response):
 
 
 def to_url(relative):
-    ret_val = f"http://localhost:{APP_PORT}/{relative}"
+    ret_val = f"http://localhost:{APP_PORT}"
+
+    if relative[0] != "/":
+        ret_val += "/"
+
+    ret_val += relative
 
     if not ret_val.endswith("/"):
         ret_val += "/"
+
     return ret_val
 
 
@@ -89,9 +96,27 @@ def create_authentication():
     app.debug = True
 
     @app.route('/', methods=["POST", "PUT"])
-    def hello_world():
+    def authentication():
         _log.debug("in auth")
-        return 'Hello Authentication!'
+
+        try:
+            req = request.json
+        except:
+            _log.debug("create authentication bad request")
+            return "invalid request", 400
+
+        auth_provider = str(req.get("auth_provider")).lower()
+
+        auth_providers = [x.lower() for x in authentication_providers()]
+
+        if auth_provider not in auth_providers:
+            _log.debug(f"invalid auth provider {auth_provider}")
+            return "invalid authenticator provider", 400
+
+        auth_url = to_url(f"authenticate/{auth_provider}")
+
+        resp = requests.post(auth_url, req)
+        return from_response(resp)
 
     return app
 
@@ -120,12 +145,78 @@ def _configure_logging():
 _configure_logging()
 
 
+def create_payment_provider(name):
+    app = Flask(name)
+    app.debug = True
+
+    @app.route('/', methods=["POST", "PUT"])
+    def pay():
+        _log.debug(f"in payment provider {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Payment Declined", 404
+        else:
+            return "Provider is experiencing some difficulties", 500
+
+    return app
+
+
+def create_auth_provider(name):
+    app = Flask(name)
+    app.debug = True
+
+    @app.route('/', methods=["POST", "PUT"])
+    def authenticate():
+        _log.debug(f"in payment provider {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Bad Credentials", 401
+        else:
+            return "Provider is experiencing some difficulties", 500
+
+    return app
+
+
+def payment_providers():
+    return ["PayPal", "Due", "Stripe", "FlagShip", "Square", "BitPay", "Adyen", "GoCardless", "Visa"]
+
+
+def add_payment_providers(apps):
+    providers = payment_providers()
+    for provider in providers:
+        apps[f"/pay/{provider.lower()}"] = create_payment_provider(provider)
+
+    return apps
+
+
+def authentication_providers():
+    return ["Google", "Facebook", "Twitter", "Yahoo", "Apple", "Microsoft", "Github"]
+
+
+def add_authentication_providers(apps):
+    auth_providers = authentication_providers()
+
+    for provider in auth_providers:
+        apps[f"/authenticate/{provider.lower()}"] = create_auth_provider(provider)
+
+    return apps
+
+
 if __name__ == '__main__':
-    app = DispatcherMiddleware(create_main(), {
+    apps = {
         "/shop": create_shop(),
         "/payment": create_payment(),
         "/auth": create_authentication(),
-    })
+    }
+    add_payment_providers(apps)
+    add_authentication_providers(apps)
+
+    app = DispatcherMiddleware(create_main(), apps)
     run_simple('localhost', APP_PORT, app,
                use_reloader=True, use_debugger=False, use_evalex=True, threaded=True)
-
