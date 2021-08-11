@@ -20,6 +20,8 @@ pub struct GraphQueryParams {
     pub from_types: BTreeSet<NodeType>,
     #[serde(default)]
     pub to_types: BTreeSet<NodeType>,
+    #[serde(default)]
+    pub edge_statuses: BTreeSet<EdgeStatus>,
 }
 
 impl Deref for GraphQueryParams {
@@ -46,7 +48,7 @@ impl Deref for NodeQueryParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum EdgeStatus {
     Ok,
