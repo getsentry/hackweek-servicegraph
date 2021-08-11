@@ -42,6 +42,10 @@ pub async fn register_nodes(
             "name",
             nodes.iter().map(|x| x.name.clone()).collect::<Vec<_>>(),
         )
+        .column(
+            "parent_id",
+            nodes.iter().map(|x| x.parent_id).collect::<Vec<_>>(),
+        )
         .column("timestamp", vec![now; nodes.len()]);
     client.insert("nodes", block).await?;
     Ok(())
