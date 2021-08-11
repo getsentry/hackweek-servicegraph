@@ -79,6 +79,7 @@ fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
         node_id: row.get(format!("{}node_id", prefix).as_str())?,
         node_type: NodeType::from_u8(row.get(format!("{}node_type", prefix).as_str())?),
         name: row.get(format!("{}node_name", prefix).as_str())?,
+        description: row.get(format!("{}node_description", prefix).as_str())?,
         parent_id: row.get(format!("{}node_parent_id", prefix).as_str())?,
     })
 }
@@ -98,10 +99,13 @@ pub async fn query_graph(
             from_node.name as from_node_name,
             from_node.node_type as from_node_type,
             from_node.parent_id as from_node_parent_id,
+            any(from_node.description) as from_node_description,
             edges.to_node_id as to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
             from_node.parent_id as to_node_parent_id,
+            any(to_node.description) as to_node_description,
+            any(edges.description) as edge_description,
             toUInt32(sumIfMerge(edges.status_ok)) as status_ok,
             toUInt32(sumIfMerge(edges.status_expected_error)) as status_expected_error,
             toUInt32(sumIfMerge(edges.status_unexpected_error)) as status_unexpected_error
@@ -128,6 +132,7 @@ pub async fn query_graph(
         edges.push(CombinedEdge {
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
+            description: row.get("edge_description")?,
             status_ok: row.get("status_ok")?,
             status_expected_error: row.get("status_expected_error")?,
             status_unexpected_error: row.get("status_unexpected_error")?,
@@ -160,7 +165,8 @@ pub async fn query_active_nodes(
                 s.last_activity as last_activity,
                 nodes.name as node_name,
                 nodes.node_type as node_type,
-                nodes.parent_id as node_parent_id
+                nodes.parent_id as node_parent_id,
+                nodes.description as node_description
             FROM (
                 SELECT
                     s.node_id node_id,
@@ -223,6 +229,7 @@ mod tests {
                 node_id: Uuid::new_v4(),
                 node_type: NodeType::Service,
                 name: format!("service_{}", i),
+                description: None,
                 parent_id: None,
             })
         }
@@ -235,6 +242,7 @@ mod tests {
                 node_id: Uuid::new_v4(),
                 node_type: NodeType::Transaction,
                 name: format!("transaction_{}", i),
+                description: None,
                 parent_id: Some(parent_id),
             });
         }
@@ -264,6 +272,7 @@ mod tests {
                 from_node_id,
                 to_node_id,
                 status,
+                description: Some("calls".into()),
                 n: count,
             });
         }

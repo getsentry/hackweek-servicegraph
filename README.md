@@ -61,7 +61,8 @@ Content-Type: application/json
       "node_id": "NODE_ID as guid",
       "name": "human readable name of the node reported in the UI",
       "type": "service | transaction",
-      "parent_id": "id of the parent node (eg: service node id) for transactions"
+      "parent_id": "id of the parent node (eg: service node id) for transactions",
+      "description": "extended human readable description of the node"
     }
   ]
 }
@@ -84,7 +85,7 @@ which identifies it internally in the system.
 
 ## Reporting Connections
 
-To report connections one submits the edges between nodes in the graph.
+To report connections (edges)) one submits the edges between nodes in the graph.
 
 ```yaml
 POST /submit
@@ -97,7 +98,8 @@ Content-Type: application/json
       "from_node_id": "FROM_NODE_ID",
       "to_node_id": "TO_NODE_ID",
       "status": "status code",
-      "n": "how many times did this happen"
+      "n": "how many times did this happen",
+      "description": "extended description of what the edge is"
     }
   ]
 }
@@ -110,4 +112,3 @@ The following status flags can exist:
 - `ok`: the connection was healthy
 - `expected_error`: the connection encountered an expected error (eg: failure response)
 - `unexpected_error`: the connection encountered un unexpected error (eg: internal server error)
-- `fatal`: the connection failed in a fatal way (eg: service unreachable)
