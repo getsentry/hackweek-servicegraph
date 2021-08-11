@@ -92,18 +92,20 @@ class Client(object):
         nodes = []
         edges = []
 
-        for node_id, node_info in self.pending_connections.items():
+        for node_id, node_info in self.pending_nodes.items():
             node_info["node_id"] = node_id
             nodes.append(node_info)
 
-        for bucket, counters in self.pending_nodes.items():
+        for bucket, counters in self.pending_connections.items():
+            print(f"bucket {bucket} type={type(bucket)}")
+            print(f"counters {counters} type={type(counters)}")
             from_node, to_node, ts = bucket
             for status, n in counters.items():
                 edges.append(
                     {
                         "ts": datetime.utcfromtimestamp(ts).isoformat() + "Z",
-                        "from": from_node,
-                        "to": to_node,
+                        "from_node_id": from_node,
+                        "to_node_id": to_node,
                         "status": status,
                         "n": n,
                     }
@@ -111,7 +113,7 @@ class Client(object):
 
         urlopen(
             Request(
-                url="http://%s:%d/submit" % (self.host, self.port),
+                url="http://%s:%d/submit/" % (self.host, self.port),
                 headers={"content-type": "application/json"},
                 method="POST",
                 data=bytes(json.dumps(
@@ -139,7 +141,7 @@ class Client(object):
         guid = uuid.uuid5(namespace, name)
         self.pending_nodes[str(guid)] = {
             "name": name,
-            "type": type,
+            "node_type": type,
             "parent_id": str(parent_id) if parent_id is not None else None,
         }
         self.known_nodes[seen_key] = guid
