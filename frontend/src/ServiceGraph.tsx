@@ -17,6 +17,7 @@ import {
   NodeType,
   ActiveNodes,
   ServiceMapPayload,
+  EdgeStatus,
 } from "./types";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
@@ -56,9 +57,11 @@ const fetchServiceGraph =
   ({
     nodeSources,
     nodeTargets,
+    edgeStatuses,
   }: {
     nodeSources: Set<NodeType>;
     nodeTargets: Set<NodeType>;
+    edgeStatuses: Set<EdgeStatus>;
   }) =>
   (): Promise<ServiceMapPayload> => {
     return fetch("http://127.0.0.1:8000/service-map", {
@@ -71,22 +74,7 @@ const fetchServiceGraph =
         project_id: 1,
         from_types: Array.from(nodeSources),
         to_types: Array.from(nodeTargets),
-      }),
-    }).then((res) => res.json());
-  };
-
-const fetchActiveNodes =
-  ({ nodeTypes }: { nodeTypes: Set<NodeType> }) =>
-  (): Promise<ActiveNodes> => {
-    return fetch("http://127.0.0.1:8000/active-nodes", {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        project_id: 1,
-        types: nodeTypes,
+        edge_statuses: Array.from(edgeStatuses),
       }),
     }).then((res) => res.json());
   };
@@ -259,6 +247,8 @@ type Props = {
   toggleNodeSource: (nodeType: NodeType) => void;
   nodeTargets: Set<NodeType>;
   toggleNodeTarget: (nodeType: NodeType) => void;
+  edgeStatuses: Set<EdgeStatus>;
+  toggleEdgeStatuses: (status: EdgeStatus) => void;
 };
 
 type GraphReference = {
@@ -324,8 +314,8 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodes: new Set(),
         edges: new Set(),
       },
-      previousNodes: prevState.nodes,
-      previousEdges: prevState.edges,
+      previousNodes: new Map(prevState.nodes),
+      previousEdges: new Map(prevState.edges),
     };
 
     // add any new nodes and mark stale nodes to be removed from the cytoscape graph
@@ -606,9 +596,10 @@ class ServiceGraphView extends React.Component<Props, State> {
           invariant(false, `expected edge: ${edge_key}`);
         }
       });
-
+      console.log("componentDidMount - commit");
       this.setState({
         staging: {
+          // ...this.state.staging,
           add: {
             nodes: new Set(),
             edges: new Set(),
@@ -617,8 +608,8 @@ class ServiceGraphView extends React.Component<Props, State> {
             nodes: new Set(),
             edges: new Set(),
           },
-          previousNodes: new Map(),
-          previousEdges: new Map(),
+          previousEdges: new Map(this.state.edges),
+          previousNodes: new Map(this.state.nodes),
         },
         committed,
       });
@@ -636,7 +627,7 @@ class ServiceGraphView extends React.Component<Props, State> {
     });
 
     this.state.committed.edges.forEach((edge_key) => {
-      const edge = this.state.edges.get(edge_key);
+      const edge = this.state.staging.previousEdges.get(edge_key);
       if (edge) {
         const cytoscapeEdge = edgeToCytoscape(edge);
         invariant(
@@ -647,6 +638,14 @@ class ServiceGraphView extends React.Component<Props, State> {
             .empty(),
           `expect edge to exist in cytoscape graph: ${edge}`
         );
+      } else {
+        console.log(
+          "this.state.staging.previousEdges",
+          this.state.staging.previousEdges
+        );
+        console.log("this.state.edges", this.state.edges);
+        console.log("this.state.committed.edges", this.state.committed.edges);
+        invariant(false, `expect edge: ${edge_key}`);
       }
     });
 
@@ -751,6 +750,10 @@ class ServiceGraphView extends React.Component<Props, State> {
       });
 
       this.state.nodes.forEach((node) => {
+        if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
+          this.graph?.add(nodeToCytoscape(node));
+        }
+
         if (node.parent_id) {
           this.graph
             ?.nodes(`[id = '${node.node_id}']`)
@@ -758,11 +761,26 @@ class ServiceGraphView extends React.Component<Props, State> {
         }
       });
 
+      this.state.edges.forEach((edge) => {
+        if (!this.state.nodes.has(edge.from_node_id)) {
+          invariant(false, `source node does not exist ${edge.from_node_id}`);
+        }
+
+        const selector = `edge[source = '${edge.from_node_id}'][target = '${edge.to_node_id}']`;
+
+        if (this.graph?.elements(selector).empty()) {
+          this.graph?.add(edgeToCytoscape(edge));
+          console.log("repair");
+        }
+      });
+
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
 
+      console.log("componentDidUpdate - commit");
       this.setState({
         staging: {
+          // ...this.state.staging,
           add: {
             nodes: new Set(),
             edges: new Set(),
@@ -771,8 +789,8 @@ class ServiceGraphView extends React.Component<Props, State> {
             nodes: new Set(),
             edges: new Set(),
           },
-          previousNodes: new Map(),
-          previousEdges: new Map(),
+          previousEdges: new Map(this.state.edges),
+          previousNodes: new Map(this.state.nodes),
         },
         committed,
       });
@@ -827,8 +845,14 @@ class ServiceGraphView extends React.Component<Props, State> {
   };
 
   render() {
-    const { toggleNodeSource, nodeSources, toggleNodeTarget, nodeTargets } =
-      this.props;
+    const {
+      toggleNodeSource,
+      nodeSources,
+      toggleNodeTarget,
+      nodeTargets,
+      edgeStatuses,
+      toggleEdgeStatuses,
+    } = this.props;
 
     return (
       <React.Fragment>
@@ -899,7 +923,47 @@ class ServiceGraphView extends React.Component<Props, State> {
             </div>
           </div>
 
-          <hr className="m-2" />
+          <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
+            <div>
+              <strong>Status</strong>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={edgeStatuses.has("ok")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleEdgeStatuses("ok");
+                }}
+              >
+                Ok
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={edgeStatuses.has("expected_error")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleEdgeStatuses("expected_error");
+                }}
+              >
+                Expected Error (400s)
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={edgeStatuses.has("unexpected_error")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  toggleEdgeStatuses("unexpected_error");
+                }}
+              >
+                Un-expected Error (500s)
+              </ToggleLink>
+            </div>
+          </div>
         </Controls>
       </React.Fragment>
     );
@@ -915,6 +979,23 @@ const Controls = styled.div`
 `;
 
 function FetchData() {
+  const [edgeStatuses, setEdgeStatuses] = React.useState<Set<EdgeStatus>>(
+    new Set([] as EdgeStatus[])
+  );
+
+  const toggleEdgeStatuses = (status: EdgeStatus) => {
+    setEdgeStatuses((prevState) => {
+      const nextState = new Set(prevState);
+      if (prevState.has(status)) {
+        nextState.delete(status);
+      } else {
+        nextState.add(status);
+      }
+
+      return nextState;
+    });
+  };
+
   const [nodeSources, setNodeSources] = React.useState<Set<NodeType>>(
     new Set([] as NodeType[])
   );
@@ -960,10 +1041,14 @@ function FetchData() {
   const { isLoading, error, data, refetch } = useQuery<
     ServiceMapPayload,
     Error
-  >("serviceGraph", fetchServiceGraph({ nodeSources, nodeTargets }), {
-    // Refetch the data every second
-    refetchInterval: 1000,
-  });
+  >(
+    "serviceGraph",
+    fetchServiceGraph({ nodeSources, nodeTargets, edgeStatuses }),
+    {
+      // Refetch the data every second
+      refetchInterval: 1000,
+    }
+  );
 
   console.log("data", data);
   // const activeNodesQuery = useQuery('activeNodes', fetchActiveNodes());
@@ -1026,6 +1111,8 @@ function FetchData() {
       toggleNodeSource={toggleNodeSource}
       nodeTargets={nodeTargets}
       toggleNodeTarget={toggleNodeTarget}
+      edgeStatuses={edgeStatuses}
+      toggleEdgeStatuses={toggleEdgeStatuses}
     />
   );
 }
