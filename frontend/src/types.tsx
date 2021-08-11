@@ -3,6 +3,7 @@ export type Uuid = string;
 export type CombinedEdge = {
   from_node_id: Uuid;
   to_node_id: Uuid;
+  description: string | null;
   status_ok: number;
   status_expected_error: number;
   status_unexpected_error: number;
@@ -14,6 +15,7 @@ export type Node = {
   node_id: Uuid;
   node_type: NodeType;
   name: String;
+  description: string | null;
   parent_id?: Uuid;
 };
 
