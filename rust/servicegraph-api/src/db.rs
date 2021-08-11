@@ -8,7 +8,9 @@ use clickhouse_rs::{Block, ClientHandle, Pool};
 use lazy_static::lazy_static;
 
 use crate::error::Error;
-use crate::payloads::{ActiveNodes, CombinedEdge, Edge, Graph, Node, NodeActivity, NodeType};
+use crate::payloads::{
+    ActiveNodes, CombinedEdge, Edge, Graph, Node, NodeActivity, NodeType, QueryParams,
+};
 
 lazy_static! {
     static ref CLICKHOUSE_POOL: Pool =
@@ -58,16 +60,13 @@ pub async fn register_edges(
     Ok(())
 }
 
-fn default_date_range(
-    start_date: Option<DateTime<Utc>>,
-    end_date: Option<DateTime<Utc>>,
-) -> (DateTime<Utc>, DateTime<Utc>) {
+fn default_date_range(params: &QueryParams) -> (DateTime<Utc>, DateTime<Utc>) {
     (
-        match start_date {
+        match params.start_date {
             Some(s) => s,
             None => Utc::now() - Duration::hours(1),
         },
-        match end_date {
+        match params.end_date {
             Some(s) => s,
             None => Utc::now(),
         },
@@ -84,13 +83,8 @@ fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
     })
 }
 
-pub async fn query_graph(
-    client: &mut ClientHandle,
-    project_id: u64,
-    start_date: Option<DateTime<Utc>>,
-    end_date: Option<DateTime<Utc>>,
-) -> Result<Graph, Error> {
-    let (start_date_bound, end_date_bound) = default_date_range(start_date, end_date);
+pub async fn query_graph(client: &mut ClientHandle, params: &QueryParams) -> Result<Graph, Error> {
+    let (start_date_bound, end_date_bound) = default_date_range(params);
     let block = client
         .query(&format!(
             "
@@ -118,7 +112,7 @@ pub async fn query_graph(
          AND to_node.project_id = edges.project_id
         WHERE edges.project_id = {} AND edges.ts >= toDateTime('{}') AND edges.ts <= toDateTime('{}')
         GROUP BY from_node_id, from_node_name, from_node_type, from_node_parent_id, to_node_id, to_node_name, to_node_type, to_node_parent_id",
-            project_id,
+            params.project_id,
             start_date_bound.format("%Y-%m-%d %H:%M:%S"),
             end_date_bound.format("%Y-%m-%d %H:%M:%S"),
         ))
@@ -152,14 +146,12 @@ pub async fn query_graph(
 
 pub async fn query_active_nodes(
     client: &mut ClientHandle,
-    project_id: u64,
-    start_date: Option<DateTime<Utc>>,
-    end_date: Option<DateTime<Utc>>,
+    params: &QueryParams,
 ) -> Result<ActiveNodes, Error> {
-    let (start_date_bound, end_date_bound) = default_date_range(start_date, end_date);
+    let (start_date_bound, end_date_bound) = default_date_range(params);
     let edge_where = format!(
         "project_id = {} AND ts >= toDateTime('{}') AND ts <= toDateTime('{}')",
-        project_id,
+        params.project_id,
         start_date_bound.format("%Y-%m-%d %H:%M:%S"),
         end_date_bound.format("%Y-%m-%d %H:%M:%S"),
     );
@@ -298,14 +290,25 @@ mod tests {
 
         let mut client = get_client().await.unwrap();
         register_edges(&mut client, 1, &edges).await.unwrap();
-        let results = query_graph(&mut client, 1, None, None).await.unwrap();
+        let results = query_graph(
+            &mut client,
+            &QueryParams {
+                project_id: 1,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
         assert!(!results.edges.is_empty());
         assert!(!results.nodes.is_empty());
         let empty_results = query_graph(
             &mut client,
-            1,
-            Some(Utc::now() - Duration::weeks(20)),
-            Some(Utc::now() - Duration::weeks(19)),
+            &QueryParams {
+                project_id: 1,
+                start_date: Some(Utc::now() - Duration::weeks(20)),
+                end_date: Some(Utc::now() - Duration::weeks(19)),
+                ..Default::default()
+            },
         )
         .await
         .unwrap();
