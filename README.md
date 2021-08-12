@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/getsentry/hackweek-servicegraph/blob/master/artwork/logo.png?raw=true" alt="servicegraph" width="700">
+  <img src="https://github.com/getsentry/hackweek-servicegraph/blob/main/artwork/logo.png?raw=true" alt="servicegraph" width="700">
 </p>
 
 
