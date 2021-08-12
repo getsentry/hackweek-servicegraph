@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use crate::error::Error;
 use crate::payloads::{
-    ActiveNodes, Bucket, CombinedEdge, CommonQueryParams, Edge, EdgeStatus, Graph, GraphQueryParams, Histogram, Node,
-    NodeActivity, NodeQueryParams, NodeType, NodeWithStatus,
+    ActiveNodes, Bucket, CombinedEdge, CommonQueryParams, Edge, EdgeStatus, Graph,
+    GraphQueryParams, Histogram, Node, NodeActivity, NodeQueryParams, NodeType, NodeWithStatus,
 };
 
 lazy_static! {
@@ -232,19 +232,31 @@ pub async fn query_graph(
         edges.push(edge);
 
         let from_node = node_from_row(&row, "from_")?;
+        let from_node_id = from_node.node_id;
         nodes.insert(from_node.node_id, from_node);
         let to_node = node_from_row(&row, "to_")?;
         let to_node_id = to_node.node_id;
         nodes.insert(to_node_id, to_node);
 
-        let prev = node_statuses.get(&to_node_id).unwrap_or(&(0, 0, 0));
-        let values = (
-            prev.0 + status_ok,
-            prev.1 + status_expected_error,
-            prev.2 + status_unexpected_error,
+        let prev_to_status = node_statuses.get(&to_node_id).unwrap_or(&(0, 0, 0));
+        node_statuses.insert(
+            to_node_id,
+            (
+                prev_to_status.0 + status_ok,
+                prev_to_status.1 + status_expected_error,
+                prev_to_status.2 + status_unexpected_error,
+            ),
         );
 
-        node_statuses.insert(to_node_id, values);
+        let prev_from_status = node_statuses.get(&from_node_id).unwrap_or(&(0, 0, 0));
+        node_statuses.insert(
+            from_node_id,
+            (
+                prev_from_status.0 + 0,
+                prev_from_status.1 + 0,
+                prev_from_status.2 + 0,
+            ),
+        );
     }
 
     let mut nodes_with_status = HashMap::new();
@@ -335,7 +347,6 @@ pub async fn query_active_nodes(
     Ok(ActiveNodes { nodes })
 }
 
-
 pub async fn query_histogram(
     client: &mut ClientHandle,
     params: &CommonQueryParams,
@@ -369,12 +380,14 @@ pub async fn query_histogram(
 
     for row in block.rows() {
         let ts: DateTime<Tz> = row.get("ts")?;
-        buckets.push(Bucket{ts: ts.with_timezone(&Utc), n: row.get("count")?});
+        buckets.push(Bucket {
+            ts: ts.with_timezone(&Utc),
+            n: row.get("count")?,
+        });
     }
 
-    Ok(Histogram { buckets: buckets})
+    Ok(Histogram { buckets: buckets })
 }
-
 
 #[cfg(test)]
 mod tests {
