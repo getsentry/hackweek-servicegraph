@@ -291,8 +291,10 @@ function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
 type Props = {
   data: Graph;
   nodeSources: Set<NodeType>;
+  setNodeSources: (nodeTypes: Set<NodeType>) => void;
   toggleNodeSource: (nodeType: NodeType) => void;
   nodeTargets: Set<NodeType>;
+  setNodeTargets: (nodeTypes: Set<NodeType>) => void;
   toggleNodeTarget: (nodeType: NodeType) => void;
   edgeStatuses: Set<EdgeStatus>;
   toggleEdgeStatuses: (status: EdgeStatus) => void;
@@ -865,7 +867,23 @@ class ServiceGraphView extends React.Component<Props, State> {
         }
       });
 
+      // -----
+
       // TODO: simplify?
+      // const committed = {
+      //   nodes: new Set(
+      //     Object.entries(this.state.nodes).map(([_, node]: [string, Node]) => {
+      //       return node.node_id;
+      //     })
+      //   ),
+      //   edges: new Set(
+      //     Object.entries(this.state.edges).map(
+      //       ([_, edge]: [string, CombinedEdge]) => {
+      //         return getEdgeKey(edge);
+      //       }
+      //     )
+      //   ),
+      // };
       this.graph?.remove(`*`);
       this.state.nodes.forEach((node) => {
         if (node.node_id.endsWith("-ghost")) {
@@ -877,6 +895,8 @@ class ServiceGraphView extends React.Component<Props, State> {
       this.state.edges.forEach((edge) => {
         this.graph?.add(edgeToCytoscape(edge));
       });
+
+      // -----
 
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
@@ -956,6 +976,8 @@ class ServiceGraphView extends React.Component<Props, State> {
 
   render() {
     const {
+      setNodeSources,
+      setNodeTargets,
       toggleNodeSource,
       nodeSources,
       toggleNodeTarget,
@@ -974,6 +996,55 @@ class ServiceGraphView extends React.Component<Props, State> {
           <div className="grid grid-flow-col auto-cols-min gap-2 items-center">
             <div>
               <strong>Nodes</strong>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={
+                  (nodeSources.has("transaction") &&
+                    nodeSources.has("service") &&
+                    nodeTargets.has("transaction") &&
+                    nodeTargets.has("service")) ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNodeSources(
+                    new Set(["transaction", "service"] as NodeType[])
+                  );
+                  setNodeTargets(
+                    new Set(["transaction", "service"] as NodeType[])
+                  );
+                }}
+              >
+                All
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeSources.has("transaction")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNodeSources(new Set(["transaction"] as NodeType[]));
+                  setNodeTargets(new Set(["transaction"] as NodeType[]));
+                }}
+              >
+                Transactions
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={nodeSources.has("service")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNodeSources(new Set(["service"] as NodeType[]));
+                  setNodeTargets(new Set(["service"] as NodeType[]));
+                }}
+              >
+                Services
+              </ToggleLink>
             </div>
           </div>
           <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
@@ -1258,6 +1329,8 @@ function FetchData() {
       toggleNodeSource={toggleNodeSource}
       nodeTargets={nodeTargets}
       toggleNodeTarget={toggleNodeTarget}
+      setNodeSources={setNodeSources}
+      setNodeTargets={setNodeTargets}
       edgeStatuses={edgeStatuses}
       toggleEdgeStatuses={toggleEdgeStatuses}
       histogramData={

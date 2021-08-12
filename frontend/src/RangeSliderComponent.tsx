@@ -68,6 +68,8 @@ class RangeSliderComponent extends React.Component<Props, State> {
 
     // console.log("create diagram");
 
+    console.log("processedData.length", processedData.length);
+
     this.chart
       .container(node)
       .svgWidth(550)
