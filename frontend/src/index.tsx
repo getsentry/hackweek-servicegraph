@@ -14,6 +14,7 @@ const GlobalStyle = createGlobalStyle`
 
   .cytoscape-navigatorOverlay {
     user-select: none !important;
+    z-index: 100 !important;
   }
 `;
 
