@@ -19,6 +19,14 @@ const GlobalStyle = createGlobalStyle`
   .cytoscape-navigator {
     z-index: 100 !important;
   }
+
+  .cloud-icon {
+    height: 30px;
+    width: 30px;
+    background-image: url("cloud.svg");
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
 `;
 
 ReactDOM.render(

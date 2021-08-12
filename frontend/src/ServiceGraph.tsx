@@ -30,6 +30,8 @@ import RangeSliderComponent from "./RangeSliderComponent";
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
+const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
+
 function makeLayoutConfig() {
   return {
     name: "cola",
@@ -44,6 +46,7 @@ function makeLayoutConfig() {
 try {
   cytoscape.use(cytoscapeCola);
   cytoscapeNavigator(cytoscape);
+  cytoscapeNodeHtmlLabel(cytoscape);
 } catch (_) {
   // catch navigator already registered error on hot reload
 }
@@ -567,30 +570,32 @@ class ServiceGraphView extends React.Component<Props, State> {
             },
           },
           {
+            selector: "node[inactive]",
+            style: {
+              "background-color": "#ced4da",
+              "border-color": "#ced4da",
+              opacity: 0.5,
+            },
+          },
+          {
             selector: "node:childless",
             style: {
-              "border-color": "#1864ab",
+              "border-color": "black",
+              "border-width": 1,
+              "border-style": "solid",
               "background-color": "white",
               label: "data(name)",
               "text-valign": "bottom",
-              "background-image": "./cloud.svg",
-              "background-fit": "cover",
-              "background-repeat": "no-repeat",
-              shape: "rectangle",
+              // "background-image": "./cloud.svg",
+              // "background-fit": "cover",
+              // "background-repeat": "no-repeat",
+              // shape: "rectangle",
             },
           },
           {
             selector: 'node[group="ghost"]',
             style: {
               visibility: "hidden",
-            },
-          },
-          {
-            selector: "node[inactive]",
-            style: {
-              "background-color": "#ced4da",
-              "border-color": "#ced4da",
-              opacity: 0.3,
             },
           },
           {
@@ -691,6 +696,21 @@ class ServiceGraphView extends React.Component<Props, State> {
         },
         container: this.serviceGraphContainerElement.current,
       });
+
+      // @ts-expect-error
+      this.graph.nodeHtmlLabel([
+        {
+          query: "node[node_type = 'service'][group != 'ghost']:parent", // cytoscape query selector
+          halign: "center", // title vertical position. Can be 'left',''center, 'right'
+          valign: "bottom", // title vertical position. Can be 'top',''center, 'bottom'
+          halignBox: "center", // title vertical position. Can be 'left',''center, 'right'
+          valignBox: "top", // title relative box vertical position. Can be 'top',''center, 'bottom'
+          cssClass: "", // any classes will be as attribute of <div> container for every title
+          tpl(data: any) {
+            return "<div class='cloud-icon'></div>"; // your html template here
+          },
+        },
+      ]);
 
       // @ts-expect-error
       this.minimap = this.graph.navigator();

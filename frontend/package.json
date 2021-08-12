@@ -19,6 +19,7 @@
     "cytoscape-cola": "^2.5.0",
     "cytoscape-fcose": "^2.1.0",
     "cytoscape-navigator": "^2.0.1",
+    "cytoscape-node-html-label": "^1.2.2",
     "d3": "5.15.1",
     "data-driven-range-slider": "^1.0.1",
     "date-fns": "^2.23.0",
