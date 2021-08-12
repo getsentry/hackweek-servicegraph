@@ -1393,6 +1393,7 @@ class ServiceGraphView extends React.Component<Props, State> {
                   setNodeSources(new Set([] as NodeType[]));
                   setNodeTargets(new Set([] as NodeType[]));
                   setEdgeStatuses(new Set());
+                  setTrafficVolumeFilter(0);
                 }}
               >
                 Reset
