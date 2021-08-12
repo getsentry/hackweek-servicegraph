@@ -29,13 +29,15 @@ export type Graph = {
   nodes: Array<Node>;
 };
 
-export type NodeActivity = {
-  node: Node;
-  last_activity: string;
+// date time string
+export type LastActivity = string;
+
+export type NodeWithLastActivity = Node & {
+  last_activity: LastActivity;
 };
 
 export type ActiveNodes = {
-  nodes: Array<NodeActivity>;
+  nodes: Array<NodeWithLastActivity>;
 };
 
 export type ServiceMapPayload = {

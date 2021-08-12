@@ -19,6 +19,8 @@ import {
   ServiceMapPayload,
   EdgeStatus,
   HistogramData,
+  ActiveNodes,
+  LastActivity,
 } from "./types";
 
 import RangeSliderComponent from "./RangeSliderComponent";
@@ -290,6 +292,7 @@ function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
 
 type Props = {
   data: Graph;
+  activeNodes: ActiveNodes;
   nodeSources: Set<NodeType>;
   setNodeSources: (nodeTypes: Set<NodeType>) => void;
   toggleNodeSource: (nodeType: NodeType) => void;
@@ -313,6 +316,7 @@ type GraphReference = {
 
 type State = {
   nodes: Map<Uuid, Node>;
+  node_activities: Map<Uuid, LastActivity>;
   edges: Map<string, CombinedEdge>;
 
   staging: {
@@ -332,6 +336,7 @@ class ServiceGraphView extends React.Component<Props, State> {
   state: State = {
     nodes: new Map(),
     edges: new Map(),
+    node_activities: new Map(),
     staging: {
       add: {
         nodes: new Set(),
@@ -358,10 +363,11 @@ class ServiceGraphView extends React.Component<Props, State> {
   minimap: any = undefined;
 
   static getDerivedStateFromProps(props: Props, prevState: State): State {
-    const { data } = props;
+    const { data, activeNodes } = props;
 
     const nodesMap: Map<Uuid, Node> = new Map();
     const edgesMap: Map<string, CombinedEdge> = new Map();
+    const node_activities: Map<Uuid, LastActivity> = new Map();
 
     const staging: State["staging"] = {
       add: {
@@ -381,6 +387,25 @@ class ServiceGraphView extends React.Component<Props, State> {
     data.nodes.forEach((node) => {
       // update nodes dictionary with latest node information
       nodesMap.set(node.node_id, node);
+
+      if (node.node_type === "service" && !node.parent_id) {
+        const ghostNode = createGhostNode(node);
+        nodesMap.set(ghostNode.node_id, ghostNode);
+        staging.add.nodes.add(ghostNode.node_id);
+      }
+
+      // assume node is new; if it is not new, then it'll be removed from staging
+      // when prevState.committed.nodes is traversed
+      staging.add.nodes.add(node.node_id);
+    });
+
+    // add any active nodes and mark stale active node to be removed from the cytoscape graph
+    activeNodes.nodes.forEach((node) => {
+      node_activities.set(node.node_id, node.last_activity);
+
+      if (!nodesMap.has(node.node_id)) {
+        nodesMap.set(node.node_id, node);
+      }
 
       if (node.node_type === "service" && !node.parent_id) {
         const ghostNode = createGhostNode(node);
@@ -1370,6 +1395,7 @@ function FetchData() {
   return (
     <ServiceGraphView
       data={data.graph}
+      activeNodes={data.active_nodes}
       nodeSources={nodeSources}
       toggleNodeSource={toggleNodeSource}
       nodeTargets={nodeTargets}
