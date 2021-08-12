@@ -273,6 +273,15 @@ function ghostNodeToCytoscape(node: Node): cytoscape.NodeDefinition {
   };
 }
 
+const preprocessNodeForCytoscape =
+  (callback: (x: cytoscape.NodeDefinition) => void) => (node: Node) => {
+    if (node.node_id.endsWith("-ghost")) {
+      callback(ghostNodeToCytoscape(node));
+    } else {
+      callback(nodeToCytoscape(node));
+    }
+  };
+
 function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
   return {
     data: {
@@ -494,11 +503,9 @@ class ServiceGraphView extends React.Component<Props, State> {
       this.state.staging.add.nodes.forEach((node_id) => {
         const node = this.state.nodes.get(node_id);
         if (node) {
-          if (node.node_id.endsWith("-ghost")) {
-            nodes.push(ghostNodeToCytoscape(node));
-          } else {
-            nodes.push(nodeToCytoscape(node));
-          }
+          preprocessNodeForCytoscape((node) => {
+            nodes.push(node);
+          })(node);
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -831,11 +838,10 @@ class ServiceGraphView extends React.Component<Props, State> {
         const node = this.state.nodes.get(node_id);
         if (node) {
           committed.nodes.add(node_id);
-          if (node.node_id.endsWith("-ghost")) {
-            this.graph?.add(ghostNodeToCytoscape(node));
-          } else {
-            this.graph?.add(nodeToCytoscape(node));
-          }
+
+          preprocessNodeForCytoscape((node) => {
+            this.graph?.add(node);
+          })(node);
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -866,11 +872,9 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       this.state.nodes.forEach((node) => {
         if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
-          if (node.node_id.endsWith("-ghost")) {
-            this.graph?.add(ghostNodeToCytoscape(node));
-          } else {
-            this.graph?.add(nodeToCytoscape(node));
-          }
+          preprocessNodeForCytoscape((node) => {
+            this.graph?.add(node);
+          })(node);
         }
 
         if (node.parent_id) {
@@ -910,14 +914,14 @@ class ServiceGraphView extends React.Component<Props, State> {
       //     )
       //   ),
       // };
+
       this.graph?.remove(`*`);
-      this.state.nodes.forEach((node) => {
-        if (node.node_id.endsWith("-ghost")) {
-          this.graph?.add(ghostNodeToCytoscape(node));
-        } else {
-          this.graph?.add(nodeToCytoscape(node));
-        }
-      });
+
+      this.state.nodes.forEach(
+        preprocessNodeForCytoscape((node) => {
+          this.graph?.add(node);
+        })
+      );
       this.state.edges.forEach((edge) => {
         this.graph?.add(edgeToCytoscape(edge));
       });
