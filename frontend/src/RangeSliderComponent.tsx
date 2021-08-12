@@ -7,22 +7,24 @@ import { HistogramData } from "./types";
 
 type Props = {
   data: HistogramData;
-  setStartDate: (date: Date) => void;
-  setEndDate: (date: Date) => void;
+  setStartDate: (date: Date | undefined) => void;
+  setEndDate: (date: Date | undefined) => void;
+  remount: () => void;
 };
 
 type State = {
-  selectedRange: Date[];
-  selectedData: any[];
+  selectedRange: Date[] | undefined;
+  selectedData: string[] | undefined;
 };
 
 class RangeSliderComponent extends React.Component<Props, State> {
   state: State = {
-    selectedRange: [],
-    selectedData: [],
+    selectedRange: undefined,
+    selectedData: undefined,
   };
 
   node = React.createRef<HTMLDivElement>();
+  container = React.createRef<HTMLDivElement>();
   chart: any | undefined = undefined;
 
   shouldComponentUpdate(nextProps: Props, nextState: State) {
@@ -36,9 +38,6 @@ class RangeSliderComponent extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevProps.data === this.props.data) {
-      return;
-    }
     this.createDiagram();
   }
 
@@ -67,9 +66,11 @@ class RangeSliderComponent extends React.Component<Props, State> {
     //   (bucket) => bucket.n > 0
     // );
 
+    // console.log("create diagram");
+
     this.chart
       .container(node)
-      .svgWidth(500)
+      .svgWidth(550)
       //   .svgWidth(window.innerWidth - 50)
       .svgHeight(100)
       .data(processedData)
@@ -81,7 +82,6 @@ class RangeSliderComponent extends React.Component<Props, State> {
       .accessor((ts: string) => {
         return new Date(ts);
       })
-
       .onBrush((d: any) => {
         this.setState({
           selectedRange: d.range,
@@ -94,44 +94,64 @@ class RangeSliderComponent extends React.Component<Props, State> {
       .render();
   };
 
+  generateStatus = () => {
+    let status: string[] = [];
+
+    if (this.state.selectedRange?.length === 2) {
+      status.push(
+        `${this.state.selectedRange[0].toLocaleDateString(
+          "en"
+        )} ${this.state.selectedRange[0].toLocaleTimeString(
+          "en"
+        )} to ${this.state.selectedRange[1].toLocaleDateString(
+          "en"
+        )} ${this.state.selectedRange[1].toLocaleTimeString("en")}`
+      );
+    }
+
+    if (this.state.selectedData) {
+      status.push(`${this.state.selectedData?.length ?? 0} data points`);
+    }
+
+    return (
+      <React.Fragment>
+        <span>{status.join(" \u00B7 ")}</span>
+        <a
+          href="#reset"
+          onClick={(event) => {
+            event.preventDefault();
+            this.props.setStartDate(undefined);
+            this.props.setEndDate(undefined);
+            this.props.remount();
+          }}
+        >
+          Reset
+        </a>
+      </React.Fragment>
+    );
+  };
+
   render() {
     // console.log(this.state);
     return (
-      <TimerangeContainer>
-        <div>
-          <small>
-            selected range{" "}
-            {this.state.selectedRange.length &&
-              `${this.state.selectedRange[0].toLocaleDateString(
-                "en"
-              )} ${this.state.selectedRange[0].toLocaleTimeString("en")}`}{" "}
-            ,{" "}
-            {this.state.selectedRange.length &&
-              `${this.state.selectedRange[1].toLocaleDateString(
-                "en"
-              )} ${this.state.selectedRange[1].toLocaleTimeString("en")}`}
-          </small>
-        </div>
-        <div>
-          <small>
-            selected data length - {this.state.selectedData.length}{" "}
-          </small>
-        </div>
+      <TimerangeContainer ref={this.container}>
         <div
           style={{
-            // marginTop: "50px",
             borderRadius: "5px",
-            paddingTop: "20px",
-            paddingLeft: "20px",
+            paddingTop: "40px",
+            // paddingLeft: "10px",
             backgroundColor: "#30363E",
             position: "absolute",
             bottom: 0,
             left: 0,
             width: "600px",
-            height: "120px",
+            height: "140px",
           }}
           ref={this.node}
         />
+        <TimeRangeStatus className="text-xs">
+          {this.generateStatus()}
+        </TimeRangeStatus>
       </TimerangeContainer>
     );
   }
@@ -142,8 +162,20 @@ const TimerangeContainer = styled.div`
   bottom: 0;
   left: 0;
   width: 600px;
-  height: 170px;
-  outline: 1px solid red;
+  height: 140px;
+  user-select: none;
+`;
+
+const TimeRangeStatus = styled.div`
+  position: absolute;
+  top: 5px;
+  left: 16px;
+  width: 575px;
+  height: 18px;
+  color: #fff;
+
+  display: flex;
+  justify-content: space-between;
 `;
 
 export default RangeSliderComponent;

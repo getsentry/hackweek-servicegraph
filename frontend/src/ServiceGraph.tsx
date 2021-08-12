@@ -291,8 +291,10 @@ type Props = {
   edgeStatuses: Set<EdgeStatus>;
   toggleEdgeStatuses: (status: EdgeStatus) => void;
   histogramData: HistogramData;
-  setStartDate: (date: Date) => void;
-  setEndDate: (date: Date) => void;
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+  setStartDate: (date: Date | undefined) => void;
+  setEndDate: (date: Date | undefined) => void;
 };
 
 type GraphReference = {
@@ -313,6 +315,8 @@ type State = {
   committed: GraphReference;
 
   details: DetailsPayload | undefined;
+
+  timeRangeCountKey: number;
 };
 
 class ServiceGraphView extends React.Component<Props, State> {
@@ -336,6 +340,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       edges: new Set(),
     },
     details: undefined,
+    timeRangeCountKey: 1,
   };
 
   serviceGraphContainerElement = React.createRef<HTMLDivElement>();
@@ -923,6 +928,12 @@ class ServiceGraphView extends React.Component<Props, State> {
     return undefined;
   };
 
+  remountTimeRangeComponent = () => {
+    this.setState({
+      timeRangeCountKey: this.state.timeRangeCountKey + 1,
+    });
+  };
+
   render() {
     const {
       toggleNodeSource,
@@ -1046,9 +1057,11 @@ class ServiceGraphView extends React.Component<Props, State> {
         </Controls>
         <TimerangeContainer>
           <RangeSliderComponent
+            key={String(this.state.timeRangeCountKey)}
             data={this.props.histogramData}
             setStartDate={this.props.setStartDate}
             setEndDate={this.props.setEndDate}
+            remount={this.remountTimeRangeComponent}
           />
         </TimerangeContainer>
       </React.Fragment>
@@ -1232,6 +1245,8 @@ function FetchData() {
       }
       setStartDate={setStartDate}
       setEndDate={setEndDate}
+      startDate={startDate}
+      endDate={endDate}
     />
   );
 }
