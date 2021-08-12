@@ -29,7 +29,8 @@ class Client(object):
         self.host = "localhost"
         self.port = 8000
         self.service_ns = SERVICE_NS
-        self.pending_connections = {}
+        self.pending_edges = {}
+        self.pending_edges_meta = {}
         self.pending_nodes = {}
         self.known_nodes = {}
         self._lock = threading.Lock()
@@ -41,12 +42,29 @@ class Client(object):
         thread.daemon = True
         thread.start()
 
-    def report_self(self, service_name, transaction_name=None):
-        service_id = self.report_node(name=service_name, type="service")
+    def report_self(
+        self,
+        service_name,
+        transaction_name=None,
+        service_description=None,
+        service_class=None,
+        transaction_description=None,
+        transaction_class=None,
+    ):
+        service_id = self.report_node(
+            name=service_name,
+            type="service",
+            description=service_description,
+            class_=service_class,
+        )
         self._service_id.set(service_id)
         if transaction_name is not None:
             transaction_id = self.report_node(
-                name=transaction_name, type="transaction", parent_id=service_id
+                name=transaction_name,
+                type="transaction",
+                parent_id=service_id,
+                description=transaction_description,
+                class_=transaction_class,
             )
             self._transaction_id.set(transaction_id)
 
@@ -97,37 +115,46 @@ class Client(object):
             node_info["node_id"] = node_id
             nodes.append(node_info)
 
-        for bucket, counters in self.pending_connections.items():
+        for bucket, counters in self.pending_edges.items():
             from_node, to_node, ts = bucket
+            edge_meta = self.pending_edges_meta.get(bucket)
             for status, n in counters.items():
-                edges.append(
-                    {
-                        "description": "HTTP",
-                        "ts": datetime.utcfromtimestamp(ts).isoformat() + "Z",
-                        "from_node_id": from_node,
-                        "to_node_id": to_node,
-                        "status": status,
-                        "n": n,
-                    }
-                )
+                edge = {
+                    "ts": datetime.utcfromtimestamp(ts).isoformat() + "Z",
+                    "from_node_id": from_node,
+                    "to_node_id": to_node,
+                    "status": status,
+                    "n": n,
+                }
+                if edge_meta:
+                    edge.update(edge_meta)
+                edges.append(edge)
 
         urlopen(
             Request(
                 url="http://%s:%d/submit/" % (self.host, self.port),
                 headers={"content-type": "application/json"},
                 method="POST",
-                data=bytes(json.dumps(
-                    {"nodes": nodes, "edges": edges, "project_id": self.project_id}
-                ), 'utf-8'),
+                data=bytes(
+                    json.dumps(
+                        {"nodes": nodes, "edges": edges, "project_id": self.project_id}
+                    ),
+                    "utf-8",
+                ),
             )
         )
 
-        self.pending_connections = {}
+        self.pending_edges_meta = {}
+        self.pending_edges = {}
         self.pending_nodes = {}
 
-    def report_node(self, name, type="service", parent_id=None):
+    def report_node(
+        self, name, type="service", parent_id=None, description=None, class_=None
+    ):
         if type == "service":
             namespace = self.service_ns
+            if description is None:
+                description = socket.getfqdn()
         elif type == "transaction":
             namespace = parent_id
         else:
@@ -140,20 +167,27 @@ class Client(object):
 
         guid = uuid.uuid5(namespace, name)
         self.pending_nodes[str(guid)] = {
-            "description": socket.gethostname(),
             "name": name,
             "node_type": type,
             "parent_id": str(parent_id) if parent_id is not None else None,
+            "description": description,
+            "class": class_,
         }
         self.known_nodes[seen_key] = guid
         return guid
 
-    def report_edge(self, from_node, to_node, status="ok", n=1):
+    def report_edge(
+        self, from_node, to_node, status="ok", n=1, description=None, class_=None
+    ):
         t = time.time() // 60 * 60
         bucket = (str(from_node), str(to_node), t)
 
         with self._lock:
-            counters = self.pending_connections.setdefault(bucket, {})
+            self.pending_edges_meta[bucket] = {
+                "description": description,
+                "class": class_,
+            }
+            counters = self.pending_edges.setdefault(bucket, {})
             counters[status] = counters.get(status, 0) + n
 
 
@@ -217,14 +251,14 @@ def _patch_httplib():
             )
 
         rv = real_putrequest(self, method, url, *args, **kwargs)
-        self._servicegraph_info = real_url
+        self._servicegraph_url = real_url
 
         return rv
 
     def getresponse(self, *args, **kwargs):
-        info = getattr(self, "_servicegraph_info", None)
+        url = getattr(self, "_servicegraph_url", None)
 
-        if info is None:
+        if url is None:
             return real_getresponse(self, *args, **kwargs)
 
         rv = real_getresponse(self, *args, **kwargs)
@@ -248,6 +282,8 @@ def _patch_httplib():
                     from_node=from_node,
                     to_node=to_node,
                     status=status,
+                    description=url,
+                    class_="http-request",
                 )
 
         return rv
@@ -266,6 +302,10 @@ def _patch_flask():
         client.report_self(
             service_name=self.import_name,
             transaction_name=request.endpoint,
+            service_description="flask application",
+            service_class="python http",
+            transaction_description="flask web handler",
+            transaction_class="python http",
         )
         return old_full_dispatch_request(self)
 

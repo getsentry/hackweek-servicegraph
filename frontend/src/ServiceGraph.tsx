@@ -99,7 +99,7 @@ const fetchTimelineHistogram = (): Promise<any> => {
     },
     body: JSON.stringify({
       project_id: 1,
-      start_date: new Date(new Date().getTime() - (7 * 24 * 60 * 60 * 1000)),
+      start_date: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
     }),
   }).then((res) => res.json());
 };
@@ -141,6 +141,8 @@ function NodeDetails({ node }: { node: Node | undefined }) {
       <div>Node Id: {node.node_id}</div>
       <div>Parent Id: {node.parent_id ?? "none"}</div>
       <div>Type: {node.node_type}</div>
+      <div>Description: {node.description || "none"}</div>
+      <div>Class: {node.class || "generic"}</div>
       <div>✅ Ok: {node.status_ok}</div>
       <div>🛑 Expected error: {node.status_expected_error}</div>
       <div>🔥 Unexpected error: {node.status_unexpected_error}</div>
@@ -188,6 +190,8 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
       <strong>Destination</strong>
       <NodeDetails node={destination} />
       <hr />
+      <div>Description: {edge.description || "none"}</div>
+      <div>Class: {edge.class || "generic"}</div>
       <div>OK: {edge.status_ok}</div>
       <div>Expected Error: {edge.status_expected_error}</div>
       <div>Unexpected Error: {edge.status_unexpected_error}</div>
