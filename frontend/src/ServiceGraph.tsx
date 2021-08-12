@@ -78,12 +78,14 @@ const fetchServiceGraph =
     edgeStatuses,
     startDate,
     endDate,
+    trafficVolumeFilter,
   }: {
     nodeSources: Set<NodeType>;
     nodeTargets: Set<NodeType>;
     edgeStatuses: Set<EdgeStatus>;
     startDate: Date | undefined;
     endDate: Date | undefined;
+    trafficVolumeFilter: number;
   }) =>
   (): Promise<ServiceMapPayload> => {
     // console.log("startDate", startDate);
@@ -101,6 +103,7 @@ const fetchServiceGraph =
         edge_statuses: Array.from(edgeStatuses),
         start_date: startDate?.toISOString(),
         end_date: endDate?.toISOString(),
+        traffic_volume: trafficVolumeFilter,
       }),
     }).then((res) => res.json());
   };
@@ -370,6 +373,8 @@ type Props = {
   endDate: Date | undefined;
   setStartDate: (date: Date | undefined) => void;
   setEndDate: (date: Date | undefined) => void;
+  trafficVolumeFilter: number;
+  setTrafficVolumeFilter: (volume: number) => void;
 };
 
 type GraphReference = {
@@ -1133,6 +1138,9 @@ class ServiceGraphView extends React.Component<Props, State> {
     const minVolume = Math.min(...volumes);
     const maxVolume = Math.max(...volumes);
 
+    console.log("minVolume", minVolume);
+    console.log("maxVolume", maxVolume);
+
     const percentage = (volume: number) => {
       if (maxVolume - minVolume === 0) {
         return 0;
@@ -1168,6 +1176,8 @@ class ServiceGraphView extends React.Component<Props, State> {
       edgeStatuses,
       toggleEdgeStatuses,
       setEdgeStatuses,
+      trafficVolumeFilter,
+      setTrafficVolumeFilter,
     } = this.props;
 
     return (
@@ -1371,6 +1381,22 @@ class ServiceGraphView extends React.Component<Props, State> {
                 Reset
               </ToggleLink>
             </div>
+            <div className="">
+              <strong>
+                <small>Traffic Volume</small>
+              </strong>
+              <input
+                type="range"
+                id="volume"
+                name="volume"
+                min="0"
+                max="100"
+                value={trafficVolumeFilter}
+                onChange={(event) =>
+                  setTrafficVolumeFilter(Number(event.target.value))
+                }
+              />
+            </div>
           </div>
         </Controls>
         <TimerangeContainer>
@@ -1473,6 +1499,8 @@ function FetchData() {
 
   // console.log("timelineHistogramQuery", timelineHistogramQuery.data);
 
+  const [trafficVolumeFilter, setTrafficVolumeFilter] = useThrottle<number>(0);
+
   const [startDate, setStartDate] = useThrottle<Date | undefined>(undefined);
 
   const [endDate, setEndDate] = useThrottle<Date | undefined>(undefined);
@@ -1488,6 +1516,7 @@ function FetchData() {
       edgeStatuses,
       startDate,
       endDate,
+      trafficVolumeFilter,
     }),
     {
       // Refetch the data every second
@@ -1569,6 +1598,8 @@ function FetchData() {
       setEndDate={setEndDate}
       startDate={startDate}
       endDate={endDate}
+      trafficVolumeFilter={trafficVolumeFilter}
+      setTrafficVolumeFilter={setTrafficVolumeFilter}
     />
   );
 }

@@ -1,11 +1,15 @@
+use std::cmp;
+use std::collections::BTreeSet;
+
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
-    ActiveNodes, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
+    ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
     NodeQueryParams, ServiceMap, ServiceMapQueryParams,
 };
 
@@ -55,6 +59,70 @@ pub async fn query_service_map(
 
     let graph = db::query_graph(&mut client, &params.clone().into()).await?;
     let active_nodes = db::query_active_nodes(&mut client, &params.clone().into()).await?;
+
+    if let Some(volume_filter) = params.traffic_volume {
+        let mut volume_filter = cmp::min(volume_filter, 100);
+        volume_filter = cmp::max(volume_filter, 0);
+
+        if graph.edges.len() != 0 && volume_filter > 0 {
+            let volume_filter = volume_filter as f64;
+            let volumes: Vec<u32> = graph
+                .edges
+                .iter()
+                .map(|edge| {
+                    return edge.status_expected_error
+                        + edge.status_ok
+                        + edge.status_unexpected_error;
+                })
+                .collect();
+
+            let min_volume = volumes.iter().min().unwrap();
+            let max_volume = volumes.iter().max().unwrap();
+
+            let mut keep_nodes: BTreeSet<Uuid> = BTreeSet::new();
+
+            let edges: Vec<CombinedEdge> = graph
+                .edges
+                .into_iter()
+                .filter(|edge| {
+                    let edge_volume =
+                        edge.status_expected_error + edge.status_ok + edge.status_unexpected_error;
+
+                    if (max_volume - min_volume) == 0 {
+                        return false;
+                    }
+
+                    let percentage =
+                        (edge_volume - min_volume) as f64 / (max_volume - min_volume) as f64;
+                    let percentage = percentage * 100.0;
+
+                    let result = percentage >= volume_filter;
+
+                    if result {
+                        keep_nodes.insert(edge.from_node_id);
+                        keep_nodes.insert(edge.to_node_id);
+                    }
+
+                    return result;
+                })
+                .collect();
+
+            let nodes = graph
+                .nodes
+                .into_iter()
+                .filter(|node| {
+                    return keep_nodes.contains(&node.node.node_id);
+                })
+                .collect();
+
+            let graph = Graph { edges, nodes };
+
+            return Ok(Json(ServiceMap {
+                graph,
+                active_nodes,
+            }));
+        }
+    }
 
     Ok(Json(ServiceMap {
         graph,

@@ -86,7 +86,7 @@ pub struct Edge {
     pub class: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CombinedEdge {
     pub from_node_id: Uuid,
     pub to_node_id: Uuid,
@@ -158,19 +158,31 @@ pub struct ActiveNodes {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
-pub struct ServiceMapQueryParams(GraphQueryParams);
+pub struct ServiceMapQueryParams {
+    // ServiceMapQueryParams
+    #[serde(flatten)]
+    pub common: CommonQueryParams,
+    #[serde(default)]
+    pub from_types: BTreeSet<NodeType>,
+    #[serde(default)]
+    pub to_types: BTreeSet<NodeType>,
+    #[serde(default)]
+    pub edge_statuses: BTreeSet<EdgeStatus>,
+
+    #[serde(default)]
+    pub traffic_volume: Option<u32>,
+}
 
 impl Deref for ServiceMapQueryParams {
     type Target = CommonQueryParams;
 
     fn deref(&self) -> &Self::Target {
-        &self.0.common
+        &self.common
     }
 }
 
 impl From<ServiceMapQueryParams> for GraphQueryParams {
     fn from(query: ServiceMapQueryParams) -> GraphQueryParams {
-        let query = query.0;
         GraphQueryParams {
             common: query.common,
             from_types: query.from_types,
@@ -182,7 +194,6 @@ impl From<ServiceMapQueryParams> for GraphQueryParams {
 
 impl From<ServiceMapQueryParams> for NodeQueryParams {
     fn from(query: ServiceMapQueryParams) -> NodeQueryParams {
-        let query = query.0;
         let mut types = query.from_types;
         types.extend(query.to_types.iter());
         NodeQueryParams {
