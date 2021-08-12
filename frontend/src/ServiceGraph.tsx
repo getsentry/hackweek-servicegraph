@@ -145,8 +145,8 @@ function isUnhealthy(
   expectedError: number,
   unexpectedError: number
 ): boolean {
-  const expectedErrorThreshold = 0.99;
-  const unexpectedErrorThreshold = 0.9999;
+  const expectedErrorThreshold = 0.98;
+  const unexpectedErrorThreshold = 0.99;
 
   if (ok === 0 && expectedError === 0 && unexpectedError === 0) {
     return false;
@@ -693,20 +693,35 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-color": colors.EDGE_UNHEALTHY,
             },
           },
+          */
           {
             selector: 'node[group="unhealthy"]',
             style: {
-              "border-width": 2,
-              "border-color": colors.NODE_UNHEALTHY_BORDER,
+              "background-color": colors.NODE_UNHEALTHY_BG,
+              "background-opacity": 0.3
             },
           },
-          */
           {
-            selector: "node:selected",
+            selector: 'node[group="unhealthy"]:selected',
             style: {
-              "background-color": colors.SELECTED,
-              "border-color": colors.SELECTED_BORDER,
-              "background-opacity": 0.7,
+              "background-opacity": 1
+            },
+          },
+          {
+            selector: 'node[group!="unhealthy"]',
+            style: {
+            },
+          },
+          {
+            selector: 'node > node[group!="unhealthy"]:selected',
+            style: {
+              "background-color": colors.TRANSACTION_NODE_BG_SELECTED,
+            },
+          },
+          {
+            selector: 'node[group!="unhealthy"]:compound:selected',
+            style: {
+              "background-color": colors.SERVICE_NODE_BG_SELECTED,
             },
           },
           {
