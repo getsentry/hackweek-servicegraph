@@ -298,6 +298,7 @@ type Props = {
   toggleNodeTarget: (nodeType: NodeType) => void;
   edgeStatuses: Set<EdgeStatus>;
   toggleEdgeStatuses: (status: EdgeStatus) => void;
+  setEdgeStatuses: (edge_statuses: Set<EdgeStatus>) => void;
   histogramData: HistogramData;
   startDate: Date | undefined;
   endDate: Date | undefined;
@@ -978,12 +979,13 @@ class ServiceGraphView extends React.Component<Props, State> {
     const {
       setNodeSources,
       setNodeTargets,
-      toggleNodeSource,
+      // toggleNodeSource,
       nodeSources,
-      toggleNodeTarget,
+      // toggleNodeTarget,
       nodeTargets,
       edgeStatuses,
       toggleEdgeStatuses,
+      setEdgeStatuses,
     } = this.props;
 
     return (
@@ -1131,7 +1133,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               </ToggleLink>
             </div>
           </div>
-
           <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
             <div>
               <strong>Status</strong>
@@ -1170,6 +1171,22 @@ class ServiceGraphView extends React.Component<Props, State> {
                 }}
               >
                 Un-expected Error (500s)
+              </ToggleLink>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={false}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNodeSources(new Set([] as NodeType[]));
+                  setNodeTargets(new Set([] as NodeType[]));
+                  setEdgeStatuses(new Set());
+                }}
+              >
+                Reset
               </ToggleLink>
             </div>
           </div>
@@ -1361,6 +1378,7 @@ function FetchData() {
       setNodeTargets={setNodeTargets}
       edgeStatuses={edgeStatuses}
       toggleEdgeStatuses={toggleEdgeStatuses}
+      setEdgeStatuses={setEdgeStatuses}
       histogramData={
         timelineHistogramQuery.data ?? ({ buckets: [] } as HistogramData)
       }
