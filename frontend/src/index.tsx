@@ -7,6 +7,8 @@ import reportWebVitals from "./reportWebVitals";
 import { createGlobalStyle } from "styled-components";
 import tw from "twin.macro";
 
+import colors from "./colors";
+
 const GlobalStyle = createGlobalStyle`
   body {
     ${tw`font-sans bg-gray-100`}
@@ -26,6 +28,15 @@ const GlobalStyle = createGlobalStyle`
     background-image: url("cloud.svg");
     background-size: cover;
     background-repeat: no-repeat;
+  }
+
+  .selected-transaction {
+    position: relative;
+    border: 2px dotted ${colors.SELECTED_BORDER};
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    top: 10px;
   }
 `;
 

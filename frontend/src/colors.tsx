@@ -1,7 +1,7 @@
 const colors = {
     // EDGES AND NODES SELECTED STATE
     SELECTED: "#33ff00",
-    SELECTED_BORDER:"#22ee00",
+    SELECTED_BORDER: "black",
 
 
     // NODES
