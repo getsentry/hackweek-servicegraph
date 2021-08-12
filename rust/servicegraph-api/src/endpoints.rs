@@ -79,8 +79,29 @@ pub async fn query_service_map(
                         && target_node.node.node_type == NodeType::Service;
                     let service_to_transaction = source_node.node.node_type == NodeType::Service
                         && target_node.node.node_type == NodeType::Transaction;
+
+                    let transaction_to_service = source_node.node.node_type
+                        == NodeType::Transaction
+                        && target_node.node.node_type == NodeType::Service;
+
                     if service_to_service || service_to_transaction {
                         return false;
+                    }
+
+                    if transaction_to_service {
+                        let has_child = graph
+                            .nodes
+                            .iter()
+                            .find(|node| {
+                                if let Some(parent_id) = node.node.parent_id {
+                                    return parent_id == target_node.node.node_id;
+                                }
+                                return false;
+                            })
+                            .is_some();
+                        if has_child {
+                            return false;
+                        }
                     }
                 }
             }
@@ -105,7 +126,10 @@ pub async fn query_service_map(
     //     })
     //     .collect();
 
-    let graph = Graph { edges, nodes: graph.nodes };
+    let graph = Graph {
+        edges,
+        nodes: graph.nodes,
+    };
 
     if let Some(volume_filter) = params.traffic_volume {
         let mut volume_filter = cmp::min(volume_filter, 100);
