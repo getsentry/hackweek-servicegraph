@@ -49,6 +49,7 @@ function makeLayoutConfig() {
     },
     flow: { axis: "y", minSeparation: 100 },
     fit: false,
+    maxSimulationTime: 0,
   } as any;
 }
 
