@@ -45,7 +45,7 @@ function makeLayoutConfig() {
   return {
     name: "cola",
     nodeSpacing: function () {
-      return 100;
+      return 50;
     },
     flow: { axis: "y", minSeparation: 100 },
     fit: false,
@@ -615,8 +615,10 @@ class ServiceGraphView extends React.Component<Props, State> {
               label: "data(name)",
               "text-valign": "bottom",
               "background-opacity": 0.9,
+              "text-margin-y": 5,
               "font-family": "Roboto Mono",
-              "font-size": "12px",
+              "font-size": "17px",
+              "border-width": 2,
             },
           },
           {
@@ -643,19 +645,6 @@ class ServiceGraphView extends React.Component<Props, State> {
             },
           },
           {
-            selector: "node:childless:orphan",
-            style: {
-              "border-width": 0,
-              // "background-color": "white",
-              label: "data(name)",
-              "text-valign": "bottom",
-              "background-image": "./cloud.svg",
-              "background-fit": "cover",
-              "background-repeat": "no-repeat",
-              shape: "rectangle",
-            },
-          },
-          {
             selector: 'node[group="ghost"]',
             style: {
               visibility: "hidden",
@@ -667,6 +656,7 @@ class ServiceGraphView extends React.Component<Props, State> {
               "background-color": colors.SERVICE_NODE_BG,
               "border-color": colors.SERVICE_NODE_BORDER,
               "text-valign": "bottom",
+              shape: "rectangle",
             },
           },
           {
@@ -678,6 +668,7 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-shape": "triangle",
             },
           },
+          /*
           {
             selector: 'edge[group="unhealthy"]',
             style: {
@@ -692,6 +683,7 @@ class ServiceGraphView extends React.Component<Props, State> {
               "border-color": colors.NODE_UNHEALTHY_BORDER,
             },
           },
+          */
           {
             selector: "node:selected",
             style: {
@@ -700,52 +692,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               "background-opacity": 0.7,
             },
           },
-
-          {
-            selector: "node.fixed",
-            style: {
-              shape: "diamond",
-              "background-color": "#9D9696",
-            },
-          },
-
-          {
-            selector: "node.fixed:selected",
-            style: {
-              "background-color": colors.SELECTED,
-            },
-          },
-
-          {
-            selector: "node.alignment",
-            style: {
-              shape: "round-heptagon",
-              "background-color": "#fef2d1",
-            },
-          },
-
-          {
-            selector: "node.alignment:selected",
-            style: {
-              "background-color": colors.SELECTED,
-            },
-          },
-
-          {
-            selector: "node.relative",
-            style: {
-              shape: "rectangle",
-              "background-color": "#fed3d1",
-            },
-          },
-
-          {
-            selector: "node.relative:selected",
-            style: {
-              "background-color": colors.SELECTED,
-            },
-          },
-
           {
             selector: "edge:selected",
             style: {

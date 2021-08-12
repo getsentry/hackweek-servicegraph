@@ -1,21 +1,19 @@
 const colors = {
-    // EDGES AND NODES SELECTED STATE
-    SELECTED: "#33ff00",
-    SELECTED_BORDER: "black",
+  // EDGES AND NODES SELECTED STATE
+  SELECTED: "#aa0000",
+  SELECTED_BORDER: "#330000",
 
+  // NODES
+  TRANSACTION_NODE_BG: "black",
+  TRANSACTION_NODE_BORDER: "black",
+  SERVICE_NODE_BG: "white",
+  SERVICE_NODE_BORDER: "black",
+  NODE_UNHEALTHY_BORDER: "#FF0000",
+  INACTIVE_NODE: "#eeeeee",
 
-    // NODES
-    TRANSACTION_NODE_BG: "white",
-    TRANSACTION_NODE_BORDER: "black",
-    SERVICE_NODE_BG: "#d0ebff",
-    SERVICE_NODE_BORDER: "#1864ab",
-    NODE_UNHEALTHY_BORDER: "#FF0000",
-    INACTIVE_NODE: "#ced4da",
-
-    // EDGES
-    EDGE_HEALTHY: "#bdd3d4",
-    EDGE_UNHEALTHY: "#ffbdb4",
-
+  // EDGES
+  EDGE_HEALTHY: "#888",
+  EDGE_UNHEALTHY: "#ffbdb4",
 };
 
 export default colors;
