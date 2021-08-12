@@ -239,34 +239,32 @@ pub async fn query_graph(
         nodes.insert(to_node_id, to_node);
 
         let prev_to_status = node_statuses.get(&to_node_id).unwrap_or(&(0, 0, 0));
-        node_statuses.insert(
-            to_node_id,
-            (
-                prev_to_status.0 + status_ok,
-                prev_to_status.1 + status_expected_error,
-                prev_to_status.2 + status_unexpected_error,
-            ),
+        let to_status = (
+            prev_to_status.0 + status_ok,
+            prev_to_status.1 + status_expected_error,
+            prev_to_status.2 + status_unexpected_error,
         );
+        node_statuses.insert(to_node_id, to_status);
 
         let prev_from_status = node_statuses.get(&from_node_id).unwrap_or(&(0, 0, 0));
-        node_statuses.insert(
-            from_node_id,
-            (
-                prev_from_status.0 + 0,
-                prev_from_status.1 + 0,
-                prev_from_status.2 + 0,
-            ),
+        let from_status = (
+            prev_from_status.0 + 0,
+            prev_from_status.1 + 0,
+            prev_from_status.2 + 0,
         );
+
+        node_statuses.insert(from_node_id, from_status);
     }
 
     let mut nodes_with_status = HashMap::new();
 
     for (node_id, node) in nodes {
+        let status = node_statuses.get(&node_id).unwrap_or(&(0, 0, 0));
         let node_with_status = NodeWithStatus {
             node: node,
-            status_ok: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).0,
-            status_expected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).1,
-            status_unexpected_error: node_statuses.get(&node_id).unwrap_or(&(0, 0, 0)).2,
+            status_ok: status.0,
+            status_expected_error: status.1,
+            status_unexpected_error: status.2,
         };
         nodes_with_status.insert(node_id, node_with_status);
     }
@@ -352,7 +350,6 @@ pub async fn query_histogram(
     params: &CommonQueryParams,
 ) -> Result<Histogram, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
-    let start_date_bound = Utc::now() - Duration::days(7);
     let block = client
         .query(&format!(
             r#"

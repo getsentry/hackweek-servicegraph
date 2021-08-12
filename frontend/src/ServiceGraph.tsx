@@ -99,6 +99,7 @@ const fetchTimelineHistogram = (): Promise<any> => {
     },
     body: JSON.stringify({
       project_id: 1,
+      start_date: new Date(new Date().getTime() - (7 * 24 * 60 * 60 * 1000)),
     }),
   }).then((res) => res.json());
 };

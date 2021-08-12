@@ -5,7 +5,7 @@ use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
-    ActiveNodes, Bucket, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
+    ActiveNodes, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
     NodeQueryParams, ServiceMap, ServiceMapQueryParams,
 };
 
