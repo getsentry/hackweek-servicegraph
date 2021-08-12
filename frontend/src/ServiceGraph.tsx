@@ -760,7 +760,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         {
           query: "node[node_type = 'service'][group != 'ghost']:parent", // cytoscape query selector
           halign: "center", // title vertical position. Can be 'left',''center, 'right'
-          valign: "bottom", // title vertical position. Can be 'top',''center, 'bottom'
+          valign: "top", // title vertical position. Can be 'top',''center, 'bottom'
           halignBox: "center", // title vertical position. Can be 'left',''center, 'right'
           valignBox: "top", // title relative box vertical position. Can be 'top',''center, 'bottom'
           cssClass: "", // any classes will be as attribute of <div> container for every title
