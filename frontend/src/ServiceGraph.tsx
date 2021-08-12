@@ -768,6 +768,21 @@ class ServiceGraphView extends React.Component<Props, State> {
       ]);
 
       // @ts-expect-error
+      this.graph.nodeHtmlLabel([
+        {
+          query: "node[node_type = 'transaction'][group != 'ghost']:selected", // cytoscape query selector
+          halign: "center", // title vertical position. Can be 'left',''center, 'right'
+          valign: "bottom", // title vertical position. Can be 'top',''center, 'bottom'
+          halignBox: "center", // title vertical position. Can be 'left',''center, 'right'
+          valignBox: "top", // title relative box vertical position. Can be 'top',''center, 'bottom'
+          cssClass: "", // any classes will be as attribute of <div> container for every title
+          tpl(data: any) {
+            return "<div class='selected-transaction'></div>"; // your html template here
+          },
+        },
+      ]);
+
+      // @ts-expect-error
       this.minimap = this.graph.navigator();
 
       this.graph.on("tap", (event) => {
