@@ -183,7 +183,7 @@ class Client(object):
         bucket = (str(from_node), str(to_node), t)
 
         with self._lock:
-            self.pending_connections_meta[bucket] = {
+            self.pending_edges_meta[bucket] = {
                 "description": description,
                 "class": class_,
             }
@@ -304,8 +304,8 @@ def _patch_flask():
             transaction_name=request.endpoint,
             service_description="flask application",
             service_class="python http",
-            endpoint_description="flask web handler",
-            endpoint_class="python http",
+            transaction_description="flask web handler",
+            transaction_class="python http",
         )
         return old_full_dispatch_request(self)
 
