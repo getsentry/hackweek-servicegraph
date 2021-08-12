@@ -2,7 +2,7 @@ import React from "react";
 import styled from "styled-components";
 
 import { QueryClient, QueryClientProvider } from "react-query";
-import { ReactQueryDevtools } from "react-query/devtools";
+// import { ReactQueryDevtools } from "react-query/devtools";
 import tw from "twin.macro";
 
 import ErrorBoundary from "./ErrorBoundary";
@@ -82,7 +82,6 @@ function App() {
             </p>
           </Content>
         </ModalLandingPage>
-        <ReactQueryDevtools />
       </QueryClientProvider>
     </ErrorBoundary>
   );
