@@ -9,6 +9,7 @@ import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
 import { useThrottle } from "@react-hook/throttle";
+import { parseISO, isValid, subHours, isWithinInterval } from "date-fns";
 
 import {
   Uuid,
@@ -296,7 +297,17 @@ const preprocessNodeForCytoscape =
     }
 
     if (last_activity) {
-      processedNode.data["last_activity"] = last_activity;
+      const maybeDate = parseISO(last_activity);
+      if (isValid(maybeDate)) {
+        const isActive = isWithinInterval(maybeDate, {
+          start: subHours(new Date(), 1),
+          end: new Date(),
+        });
+        console.log("isActive", isActive);
+        if (!isActive) {
+          processedNode.data["inactive"] = "foo";
+        }
+      }
     }
 
     callback(processedNode);
@@ -547,7 +558,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         maxZoom: 1,
         style: [
           {
-            selector: "node[last_activity]",
+            selector: "node",
             style: {
               "background-color": "#1864ab",
               label: "data(name)",
@@ -575,11 +586,11 @@ class ServiceGraphView extends React.Component<Props, State> {
             },
           },
           {
-            selector: "node[^last_activity]",
+            selector: "node[inactive]",
             style: {
               "background-color": "#ced4da",
               "border-color": "#ced4da",
-              opacity: 0.2,
+              opacity: 0.3,
             },
           },
           {

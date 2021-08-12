@@ -21,6 +21,7 @@
     "cytoscape-navigator": "^2.0.1",
     "d3": "5.15.1",
     "data-driven-range-slider": "^1.0.1",
+    "date-fns": "^2.23.0",
     "husky": "^7.0.1",
     "invariant": "^2.2.4",
     "lint-staged": "^11.1.2",
