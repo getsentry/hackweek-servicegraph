@@ -363,11 +363,20 @@ pub async fn query_histogram(
     params: &CommonQueryParams,
 ) -> Result<Histogram, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
+
+    let mut duration_func = "toStartOfMinute";
+    let duration = end_date_bound.signed_duration_since(start_date_bound);
+    if duration > Duration::days(14) {
+        duration_func = "toStartOfDay"
+    } else if duration > Duration::hours(24) {
+        duration_func = "toStartOfHour";
+    }
+
     let block = client
         .query(&format!(
             r#"
             SELECT
-                ts,
+                {duration_func}(ts) as ts,
                 plus(plus(sumIfMerge(status_ok), sumIfMerge(status_expected_error)), sumIfMerge(status_unexpected_error)) as count
             FROM edges_by_minute
             WHERE project_id = {project_id}
@@ -376,6 +385,7 @@ pub async fn query_histogram(
             GROUP BY ts
             ORDER BY ts
             "#,
+            duration_func = duration_func,
             project_id = params.project_id,
             start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
             end_date = end_date_bound.format("%Y-%m-%d %H:%M:%S"),
