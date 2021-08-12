@@ -51,17 +51,17 @@ def create_main_service():
             if not resp.ok:
                 # return authentication failure
                 return "failed to login", 401
+        return ""
 
-        # see what they want
-        request_type = req.get("type")
-        if request_type == "shop":
-            resp = requests.post(to_url("shop/"), json=req)
-            return from_response(resp)
-        elif request_type == "pay":
-            resp = requests.post(to_url("pay/"), json=req)
-            return from_response(resp)
-        else:
-            return f"Invalid request type", 400
+    @app.route("/browse", methods=["POST", "PUT"], endpoint="welcome-browse")
+    def browse():
+        resp = requests.post(to_url("shop/"), json=request.json)
+        return from_response(resp)
+
+    @app.route("/cart", methods=["POST", "PUT"], endpoint="welcome-shopping-cart")
+    def browse():
+        resp = requests.post(to_url("pay/"), json=request.json)
+        return from_response(resp)
 
     return app
 
@@ -118,9 +118,18 @@ def create_payment_service():
             _log.debug(f"invalid payment provider {payment_provider}")
             return "invalid authenticator provider", 400
 
-        pay_url = to_url(f"pay/{payment_provider}")
+        pay_url = to_url(f"pay/{payment_provider}/check")
 
-        resp = requests.post(pay_url, req)
+        resp = requests.post(pay_url, json=req)
+
+        if resp.ok:
+            pay_url = to_url(f"pay/{payment_provider}/validate")
+            resp = requests.post(pay_url, json=req)
+
+            if resp.ok:
+                pay_url = to_url(f"pay/{payment_provider}/transfer")
+                resp = requests.post(pay_url, json=req)
+
         return from_response(resp)
 
     return app
@@ -148,9 +157,13 @@ def create_authentication_service():
             _log.debug(f"invalid auth provider {auth_provider}")
             return "invalid authenticator provider", 400
 
-        auth_url = to_url(f"auth/{auth_provider}")
 
-        resp = requests.post(auth_url, req)
+        # first stage auth
+        resp = requests.post(to_url(f"auth/{auth_provider}/credentials"), json=req)
+        if resp.ok:
+            # 2fa
+            resp = requests.post(to_url(f"auth/{auth_provider}/2fa"), json=req)
+
         return from_response(resp)
 
     return app
@@ -160,9 +173,14 @@ def create_payment_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint="pay-main")
-    def pay():
-        _log.debug(f"in payment provider {name}")
+    @app.route('/check', methods=["POST", "PUT"], endpoint="pay-check-account")
+    def check_account():
+        _log.debug("in check account")
+        return "checked"
+
+    @app.route("/validate", methods=["POST", "PUT"], endpoint="pay-validate")
+    def validate():
+        _log.debug("in validate")
         payment_status = random.random()
 
         if payment_status < 0.8:
@@ -172,6 +190,11 @@ def create_payment_provider_service(name):
         else:
             return "Provider is experiencing some difficulties", 500
 
+    @app.route("/transfer", methods=["POST", "PUT"], endpoint="pay-transfer")
+    def transfer():
+        _log.debug("in check transfer")
+        return "ok"
+
     return app
 
 
@@ -179,7 +202,21 @@ def create_auth_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint=f"auth-{name}-main")
+    @app.route('/credentials', methods=["POST", "PUT"], endpoint=f"auth-{name}-credentials")
+    def authenticate():
+        _log.debug(f"in payment provider {name}")
+        payment_status = random.random()
+
+        if payment_status < 0.8:
+            return "Success", 200
+        elif payment_status < 0.95:
+            return "Bad Credentials", 401
+        else:
+            return "Provider is experiencing some difficulties", 500
+
+    return app
+
+    @app.route('/2fa', methods=["POST", "PUT"], endpoint=f"auth-{name}-2fa")
     def authenticate():
         _log.debug(f"in payment provider {name}")
         payment_status = random.random()
