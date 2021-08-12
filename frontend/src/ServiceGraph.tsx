@@ -503,6 +503,7 @@ class ServiceGraphView extends React.Component<Props, State> {
               "background-image": "./cloud.svg",
               "background-fit": "cover",
               "background-repeat": "no-repeat",
+              shape: "rectangle",
             },
           },
           {
