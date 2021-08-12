@@ -614,7 +614,7 @@ class ServiceGraphView extends React.Component<Props, State> {
             selector: "node:childless:orphan",
             style: {
               "border-width": 0,
-              "background-color": "white",
+              // "background-color": "white",
               label: "data(name)",
               "text-valign": "bottom",
               "background-image": "./cloud.svg",
