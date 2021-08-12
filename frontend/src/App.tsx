@@ -11,7 +11,7 @@ import ServiceGraph from "./ServiceGraph";
 const queryClient = new QueryClient();
 
 function App() {
-  const [hideModal, setHideModal] = React.useState<boolean>(false);
+  const [hideModal, setHideModal] = React.useState<boolean>(true);
 
   return (
     <ErrorBoundary>
