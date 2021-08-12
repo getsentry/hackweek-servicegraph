@@ -37,11 +37,12 @@ const GlobalStyle = createGlobalStyle`
   .selected-transaction {
     position: relative;
     border: 2px dotted ${colors.SELECTED_BORDER};
-    height: 50px;
-    width: 50px;
+    height: 40px;
+    width: 40px;
     border-radius: 50%;
-    top: 10px;
+    top: 5px;
   }
+
 `;
 
 ReactDOM.render(
