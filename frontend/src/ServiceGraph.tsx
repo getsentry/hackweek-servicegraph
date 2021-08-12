@@ -805,6 +805,9 @@ class ServiceGraphView extends React.Component<Props, State> {
           invariant(false, `expected edge: ${edge_key}`);
         }
       });
+
+      this.styleEdges();
+
       console.log("componentDidMount - commit");
       this.setState({
         staging: {
@@ -1025,6 +1028,8 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       // -----
 
+      this.styleEdges();
+
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
 
@@ -1107,6 +1112,46 @@ class ServiceGraphView extends React.Component<Props, State> {
   remountTimeRangeComponent = () => {
     this.setState({
       timeRangeCountKey: this.state.timeRangeCountKey + 1,
+    });
+  };
+
+  styleEdges = () => {
+    // set width based on volume
+
+    const volumes: number[] = [];
+
+    this.state.edges.forEach((edge) => {
+      volumes.push(
+        edge.status_expected_error +
+          edge.status_ok +
+          edge.status_unexpected_error
+      );
+    });
+
+    const percentage = (volume: number) => {
+      if (maxVolume - minVolume === 0) {
+        return 0;
+      }
+
+      return Math.abs(volume - minVolume) / Math.abs(maxVolume - minVolume);
+    };
+
+    const minVolume = Math.min(...volumes);
+    const maxVolume = Math.max(...volumes);
+
+    this.state.edges.forEach((edge) => {
+      const volume =
+        edge.status_expected_error +
+        edge.status_ok +
+        edge.status_unexpected_error;
+
+      const cytoscapeEdge = edgeToCytoscape(edge);
+
+      this.graph
+        ?.elements(
+          `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
+        )
+        .style("width", lerp(1, 10, percentage(volume)));
     });
   };
 
@@ -1556,5 +1601,10 @@ function ServiceGraph() {
     </QueryErrorResetBoundary>
   );
 }
+
+// simple linear interpolation between start and end such that needle is between [0, 1]
+const lerp = (start: number, end: number, needle: number) => {
+  return start + needle * (end - start);
+};
 
 export default ServiceGraph;
