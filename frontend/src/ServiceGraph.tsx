@@ -1380,7 +1380,7 @@ class ServiceGraphView extends React.Component<Props, State> {
                 Reset
               </ToggleLink>
             </div>
-            <div style={{ minWidth: "200px" }}>
+            {/* <div style={{ minWidth: "200px" }}>
               <strong>
                 <small>Traffic Volume - {trafficVolumeFilter}%</small>
               </strong>
@@ -1395,7 +1395,7 @@ class ServiceGraphView extends React.Component<Props, State> {
                   setTrafficVolumeFilter(Number(event.target.value))
                 }
               />
-            </div>
+            </div> */}
           </div>
         </Controls>
         <TimerangeContainer>
