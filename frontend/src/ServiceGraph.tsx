@@ -233,11 +233,12 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
         last_activity={destination.last_activity}
       />
       <hr />
+      <strong>Edge</strong>
       <div>Description: {edge.description || "none"}</div>
       <div>Class: {edge.class || "generic"}</div>
-      <div>OK: {edge.status_ok}</div>
-      <div>Expected Error: {edge.status_expected_error}</div>
-      <div>Unexpected Error: {edge.status_unexpected_error}</div>
+      <div>✅ OK: {edge.status_ok}</div>
+      <div>🛑 Expected Error: {edge.status_expected_error}</div>
+      <div>🔥 Unexpected Error: {edge.status_unexpected_error}</div>
     </div>
   );
 }
