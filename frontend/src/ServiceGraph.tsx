@@ -464,19 +464,19 @@ class ServiceGraphView extends React.Component<Props, State> {
     activeNodes.nodes.forEach((node) => {
       node_activities.set(node.node_id, node.last_activity);
 
-      if (!nodesMap.has(node.node_id)) {
-        nodesMap.set(node.node_id, node);
-      }
+      // if (!nodesMap.has(node.node_id)) {
+      //   nodesMap.set(node.node_id, node);
+      // }
 
-      if (node.node_type === "service" && !node.parent_id) {
-        const ghostNode = createGhostNode(node);
-        nodesMap.set(ghostNode.node_id, ghostNode);
-        staging.add.nodes.add(ghostNode.node_id);
-      }
+      // if (node.node_type === "service" && !node.parent_id) {
+      //   const ghostNode = createGhostNode(node);
+      //   nodesMap.set(ghostNode.node_id, ghostNode);
+      //   staging.add.nodes.add(ghostNode.node_id);
+      // }
 
       // assume node is new; if it is not new, then it'll be removed from staging
       // when prevState.committed.nodes is traversed
-      staging.add.nodes.add(node.node_id);
+      // staging.add.nodes.add(node.node_id);
     });
 
     prevState.committed.nodes.forEach((node_id) => {
