@@ -71,8 +71,8 @@ const fetchServiceGraph =
     endDate: Date | undefined;
   }) =>
   (): Promise<ServiceMapPayload> => {
-    console.log("startDate", startDate);
-    console.log("endDate", endDate);
+    // console.log("startDate", startDate);
+    // console.log("endDate", endDate);
     return fetch("http://127.0.0.1:8000/service-map", {
       method: "POST",
       mode: "cors",
@@ -248,14 +248,21 @@ function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
   };
 }
 
+function createGhostNode(node: Node): Node {
+  return {
+    ...node,
+    parent_id: node.node_id,
+    node_id: `${node.node_id}-ghost`,
+  };
+}
+
 function ghostNodeToCytoscape(node: Node): cytoscape.NodeDefinition {
   return {
     data: {
-      id: `${node.node_id}-ghost`,
-      parent: node.node_id,
+      ...nodeToCytoscape(node).data,
       group: "ghost",
-    }
-  }
+    },
+  };
 }
 
 function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
@@ -361,6 +368,12 @@ class ServiceGraphView extends React.Component<Props, State> {
       // update nodes dictionary with latest node information
       nodesMap.set(node.node_id, node);
 
+      if (node.node_type === "service") {
+        const ghostNode = createGhostNode(node);
+        nodesMap.set(ghostNode.node_id, ghostNode);
+        staging.add.nodes.add(ghostNode.node_id);
+      }
+
       // assume node is new; if it is not new, then it'll be removed from staging
       // when prevState.committed.nodes is traversed
       staging.add.nodes.add(node.node_id);
@@ -442,9 +455,10 @@ class ServiceGraphView extends React.Component<Props, State> {
       this.state.staging.add.nodes.forEach((node_id) => {
         const node = this.state.nodes.get(node_id);
         if (node) {
-          nodes.push(nodeToCytoscape(node));
-          if (node.node_type === "service") {
-            nodes.push(ghostNodeToCytoscape(node))
+          if (node.node_id.endsWith("-ghost")) {
+            nodes.push(ghostNodeToCytoscape(node));
+          } else {
+            nodes.push(nodeToCytoscape(node));
           }
         } else {
           throw Error(`unable to find node: ${node_id}`);
@@ -777,12 +791,11 @@ class ServiceGraphView extends React.Component<Props, State> {
         const node = this.state.nodes.get(node_id);
         if (node) {
           committed.nodes.add(node_id);
-          this.graph?.add(nodeToCytoscape(node));
-
-          if (node.node_type === "service") {
-            this.graph?.add(ghostNodeToCytoscape(node))
+          if (node.node_id.endsWith("-ghost")) {
+            this.graph?.add(ghostNodeToCytoscape(node));
+          } else {
+            this.graph?.add(nodeToCytoscape(node));
           }
-
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -813,9 +826,10 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       this.state.nodes.forEach((node) => {
         if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
-          this.graph?.add(nodeToCytoscape(node));
-          if (node.node_type === "service") {
-            this.graph?.add(ghostNodeToCytoscape(node))
+          if (node.node_id.endsWith("-ghost")) {
+            this.graph?.add(ghostNodeToCytoscape(node));
+          } else {
+            this.graph?.add(nodeToCytoscape(node));
           }
         }
 
