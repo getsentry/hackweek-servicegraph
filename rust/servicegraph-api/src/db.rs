@@ -341,6 +341,7 @@ pub async fn query_histogram(
     params: &CommonQueryParams,
 ) -> Result<Histogram, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
+    let start_date_bound = Utc::now() - Duration::days(7);
     let block = client
         .query(&format!(
             r#"
