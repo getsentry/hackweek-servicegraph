@@ -647,6 +647,7 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: 'node[group="ghost"]',
             style: {
+              height: 0,
               visibility: "hidden",
             },
           },

@@ -21,6 +21,13 @@ const GlobalStyle = createGlobalStyle`
 
   .cytoscape-navigator {
     z-index: 100 !important;
+    border: 2px solid black;
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .cytoscape-navigatorView {
+    background: #eee;
   }
 
   .cloud-icon {
