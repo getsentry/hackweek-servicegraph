@@ -1128,6 +1128,9 @@ class ServiceGraphView extends React.Component<Props, State> {
       );
     });
 
+    const minVolume = Math.min(...volumes);
+    const maxVolume = Math.max(...volumes);
+
     const percentage = (volume: number) => {
       if (maxVolume - minVolume === 0) {
         return 0;
@@ -1135,9 +1138,6 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       return Math.abs(volume - minVolume) / Math.abs(maxVolume - minVolume);
     };
-
-    const minVolume = Math.min(...volumes);
-    const maxVolume = Math.max(...volumes);
 
     this.state.edges.forEach((edge) => {
       const volume =
