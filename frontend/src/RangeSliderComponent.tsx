@@ -166,6 +166,10 @@ const TimerangeContainer = styled.div`
   width: 600px;
   height: 140px;
   user-select: none;
+
+  & .selection {
+    fill: black !important;
+  }
 `;
 
 const TimeRangeStatus = styled.div`
@@ -174,7 +178,7 @@ const TimeRangeStatus = styled.div`
   left: 16px;
   width: 575px;
   height: 18px;
-  color: #fff;
+  color: #000;
 
   display: flex;
   justify-content: space-between;
