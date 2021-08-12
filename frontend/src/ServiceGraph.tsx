@@ -8,6 +8,7 @@ import cytoscapeCola from "cytoscape-cola";
 import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
+import { useThrottle } from "@react-hook/throttle";
 
 import {
   Uuid,
@@ -15,10 +16,12 @@ import {
   Node,
   CombinedEdge,
   NodeType,
-  ActiveNodes,
   ServiceMapPayload,
   EdgeStatus,
+  HistogramData,
 } from "./types";
+
+import RangeSliderComponent from "./RangeSliderComponent";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
 const cytoscapeNavigator = require("cytoscape-navigator");
@@ -58,12 +61,18 @@ const fetchServiceGraph =
     nodeSources,
     nodeTargets,
     edgeStatuses,
+    startDate,
+    endDate,
   }: {
     nodeSources: Set<NodeType>;
     nodeTargets: Set<NodeType>;
     edgeStatuses: Set<EdgeStatus>;
+    startDate: Date | undefined;
+    endDate: Date | undefined;
   }) =>
   (): Promise<ServiceMapPayload> => {
+    console.log("startDate", startDate);
+    console.log("endDate", endDate);
     return fetch("http://127.0.0.1:8000/service-map", {
       method: "POST",
       mode: "cors",
@@ -75,9 +84,24 @@ const fetchServiceGraph =
         from_types: Array.from(nodeSources),
         to_types: Array.from(nodeTargets),
         edge_statuses: Array.from(edgeStatuses),
+        start_date: startDate?.toISOString(),
+        end_date: endDate?.toISOString(),
       }),
     }).then((res) => res.json());
   };
+
+const fetchTimelineHistogram = (): Promise<any> => {
+  return fetch("http://127.0.0.1:8000/histogram", {
+    method: "POST",
+    mode: "cors",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: 1,
+    }),
+  }).then((res) => res.json());
+};
 
 function isUnhealthy(
   ok: number,
@@ -249,6 +273,9 @@ type Props = {
   toggleNodeTarget: (nodeType: NodeType) => void;
   edgeStatuses: Set<EdgeStatus>;
   toggleEdgeStatuses: (status: EdgeStatus) => void;
+  histogramData: HistogramData;
+  setStartDate: (date: Date) => void;
+  setEndDate: (date: Date) => void;
 };
 
 type GraphReference = {
@@ -976,6 +1003,13 @@ class ServiceGraphView extends React.Component<Props, State> {
             </div>
           </div>
         </Controls>
+        <TimerangeContainer>
+          <RangeSliderComponent
+            data={this.props.histogramData}
+            setStartDate={this.props.setStartDate}
+            setEndDate={this.props.setEndDate}
+          />
+        </TimerangeContainer>
       </React.Fragment>
     );
   }
@@ -987,6 +1021,13 @@ const Controls = styled.div`
   position: absolute;
   top: 8px;
   right: 8px;
+`;
+
+const TimerangeContainer = styled.div`
+  position: absolute;
+  bottom: 8px;
+  left: 56px;
+  width: 600px;
 `;
 
 function FetchData() {
@@ -1049,19 +1090,40 @@ function FetchData() {
     });
   };
 
+  const timelineHistogramQuery = useQuery<HistogramData, Error>(
+    "timelineHistogram",
+    fetchTimelineHistogram,
+    {
+      // Refetch the data every second
+      refetchInterval: 5000,
+    }
+  );
+
+  // console.log("timelineHistogramQuery", timelineHistogramQuery.data);
+
+  const [startDate, setStartDate] = useThrottle<Date | undefined>(undefined);
+
+  const [endDate, setEndDate] = useThrottle<Date | undefined>(undefined);
+
   const { isLoading, error, data, refetch } = useQuery<
     ServiceMapPayload,
     Error
   >(
-    "serviceGraph",
-    fetchServiceGraph({ nodeSources, nodeTargets, edgeStatuses }),
+    "serviceMap",
+    fetchServiceGraph({
+      nodeSources,
+      nodeTargets,
+      edgeStatuses,
+      startDate,
+      endDate,
+    }),
     {
       // Refetch the data every second
       refetchInterval: 1000,
     }
   );
 
-  console.log("data", data);
+  // console.log("data", data);
   // const activeNodesQuery = useQuery('activeNodes', fetchActiveNodes());
 
   if (isLoading) {
@@ -1124,6 +1186,11 @@ function FetchData() {
       toggleNodeTarget={toggleNodeTarget}
       edgeStatuses={edgeStatuses}
       toggleEdgeStatuses={toggleEdgeStatuses}
+      histogramData={
+        timelineHistogramQuery.data ?? ({ buckets: [] } as HistogramData)
+      }
+      setStartDate={setStartDate}
+      setEndDate={setEndDate}
     />
   );
 }

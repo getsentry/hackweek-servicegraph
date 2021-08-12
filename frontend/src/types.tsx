@@ -42,3 +42,12 @@ export type ServiceMapPayload = {
 };
 
 export type EdgeStatus = "ok" | "unexpected_error" | "expected_error";
+
+export type Bucket = {
+  ts: string;
+  n: number;
+};
+
+export type HistogramData = {
+  buckets: Array<Bucket>;
+};

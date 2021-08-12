@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@react-hook/throttle": "^2.2.0",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -18,6 +19,8 @@
     "cytoscape-cola": "^2.5.0",
     "cytoscape-fcose": "^2.1.0",
     "cytoscape-navigator": "^2.0.1",
+    "d3": "5.15.1",
+    "data-driven-range-slider": "^1.0.1",
     "husky": "^7.0.1",
     "invariant": "^2.2.4",
     "lint-staged": "^11.1.2",
