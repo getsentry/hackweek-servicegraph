@@ -139,10 +139,10 @@ class RangeSliderComponent extends React.Component<Props, State> {
       <TimerangeContainer ref={this.container}>
         <div
           style={{
-            borderRadius: "5px",
             paddingTop: "40px",
             // paddingLeft: "10px",
-            backgroundColor: "#30363E",
+            backgroundColor: "white",
+            border: "2px solid black",
             position: "absolute",
             bottom: 0,
             left: 0,
