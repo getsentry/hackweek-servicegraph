@@ -698,19 +698,18 @@ class ServiceGraphView extends React.Component<Props, State> {
             selector: 'node[group="unhealthy"]',
             style: {
               "background-color": colors.NODE_UNHEALTHY_BG,
-              "background-opacity": 0.3
+              "background-opacity": 0.3,
             },
           },
           {
             selector: 'node[group="unhealthy"]:selected',
             style: {
-              "background-opacity": 1
+              "background-opacity": 1,
             },
           },
           {
             selector: 'node[group!="unhealthy"]',
-            style: {
-            },
+            style: {},
           },
           {
             selector: 'node > node[group!="unhealthy"]:selected',
@@ -1205,7 +1204,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       edgeStatuses,
       toggleEdgeStatuses,
       setEdgeStatuses,
-      trafficVolumeFilter,
+      // trafficVolumeFilter,
       setTrafficVolumeFilter,
     } = this.props;
 
