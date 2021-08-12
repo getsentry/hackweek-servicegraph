@@ -9,7 +9,14 @@ import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
 import { useThrottle } from "@react-hook/throttle";
-import { parseISO, isValid, subHours, isWithinInterval } from "date-fns";
+import {
+  parseISO,
+  isValid,
+  subHours,
+  isWithinInterval,
+  format,
+  formatDistanceToNow,
+} from "date-fns";
 
 import {
   Uuid,
@@ -147,6 +154,12 @@ function NodeDetails({
   if (!node) {
     return null;
   }
+
+  let lastActivityDate = last_activity ? parseISO(last_activity) : undefined;
+  let relativeDate = isValid(lastActivityDate)
+    ? formatDistanceToNow(lastActivityDate as Date, { addSuffix: true })
+    : "";
+
   return (
     <div>
       <div>Name: {node.name}</div>
@@ -155,7 +168,12 @@ function NodeDetails({
       <div>Type: {node.node_type}</div>
       <div>Description: {node.description || "none"}</div>
       <div>Class: {node.class || "generic"}</div>
-      <div>Last activity: {last_activity || "unknown"}</div>
+      <div>
+        Last activity:{" "}
+        {isValid(lastActivityDate)
+          ? `${format(lastActivityDate as Date, "PPpp")} - ${relativeDate}`
+          : "unknown"}
+      </div>
       <div>✅ Ok: {node.status_ok}</div>
       <div>🛑 Expected error: {node.status_expected_error}</div>
       <div>🔥 Unexpected error: {node.status_unexpected_error}</div>
