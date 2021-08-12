@@ -186,8 +186,10 @@ function NodeDetails({
   return (
     <div>
       <div>Name: {node.name}</div>
-      <div>Node Id: {node.node_id}</div>
-      <div>Parent Id: {node.parent_id ?? "none"}</div>
+      {
+        //<div>Node Id: {node.node_id}</div>
+        //<div>Parent Id: {node.parent_id ?? "none"}</div>
+      }
       <div>Type: {node.node_type}</div>
       <div>Description: {node.description || "none"}</div>
       <div>Class: {node.class || "generic"}</div>
@@ -1394,7 +1396,7 @@ class ServiceGraphView extends React.Component<Props, State> {
                 Reset
               </ToggleLink>
             </div>
-            <div style={{ minWidth: "200px" }}>
+            {/* <div style={{ minWidth: "200px" }}>
               <strong>
                 <small>Traffic Volume - {trafficVolumeFilter}%</small>
               </strong>
@@ -1409,7 +1411,7 @@ class ServiceGraphView extends React.Component<Props, State> {
                   setTrafficVolumeFilter(Number(event.target.value))
                 }
               />
-            </div>
+            </div> */}
           </div>
         </Controls>
         <TimerangeContainer>
