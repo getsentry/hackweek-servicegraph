@@ -373,7 +373,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       // update nodes dictionary with latest node information
       nodesMap.set(node.node_id, node);
 
-      if (node.node_type === "service") {
+      if (node.node_type === "service" && !node.parent_id) {
         const ghostNode = createGhostNode(node);
         nodesMap.set(ghostNode.node_id, ghostNode);
         staging.add.nodes.add(ghostNode.node_id);
@@ -509,7 +509,7 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: 'node[group="ghost"]',
             style: {
-              display: "none",
+              visibility: "hidden",
             },
           },
           {
