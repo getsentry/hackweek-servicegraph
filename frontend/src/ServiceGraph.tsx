@@ -90,6 +90,9 @@ const fetchServiceGraph =
   (): Promise<ServiceMapPayload> => {
     // console.log("startDate", startDate);
     // console.log("endDate", endDate);
+    if (endDate) {
+      endDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+    }
     return fetch("http://127.0.0.1:8000/service-map", {
       method: "POST",
       mode: "cors",
