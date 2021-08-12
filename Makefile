@@ -1,5 +1,5 @@
 COMPOSE_PROJECT_NAME=servicegraph
-CLICKHOUSE_SHELL=docker run --rm -it --net=host yandex/clickhouse-client:21.6 -h host.docker.internal
+CLICKHOUSE_SHELL=docker run --rm -it --net=host yandex/clickhouse-client:21.6 -h 172.17.0.1
 export PYTHON_VERSION := python3
 
 
@@ -34,7 +34,7 @@ clickhouse-debug-shell:
 api-server: up
 	cd rust/servicegraph-api && cargo run
 
-gen-data: api-server
+gen-data:
 	python3 python/sample_data/gen_data.py
 
 start-services:
