@@ -1009,12 +1009,12 @@ class ServiceGraphView extends React.Component<Props, State> {
                 }
                 onClick={(event) => {
                   event.preventDefault();
-                  setNodeSources(
-                    new Set(["transaction", "service"] as NodeType[])
-                  );
-                  setNodeTargets(
-                    new Set(["transaction", "service"] as NodeType[])
-                  );
+                  const types = new Set([
+                    "transaction",
+                    "service",
+                  ] as NodeType[]);
+                  setNodeSources(types);
+                  setNodeTargets(types);
                 }}
               >
                 All
@@ -1023,11 +1023,16 @@ class ServiceGraphView extends React.Component<Props, State> {
             <div>
               <ToggleLink
                 href="#"
-                toggleOn={nodeSources.has("transaction")}
+                toggleOn={
+                  nodeSources.has("transaction") ||
+                  nodeTargets.has("transaction") ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
                 onClick={(event) => {
                   event.preventDefault();
-                  setNodeSources(new Set(["transaction"] as NodeType[]));
-                  setNodeTargets(new Set(["transaction"] as NodeType[]));
+                  const types = new Set(["transaction"] as NodeType[]);
+                  setNodeSources(types);
+                  setNodeTargets(types);
                 }}
               >
                 Transactions
@@ -1036,70 +1041,93 @@ class ServiceGraphView extends React.Component<Props, State> {
             <div>
               <ToggleLink
                 href="#"
-                toggleOn={nodeSources.has("service")}
+                toggleOn={
+                  nodeSources.has("service") ||
+                  nodeTargets.has("service") ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
                 onClick={(event) => {
                   event.preventDefault();
-                  setNodeSources(new Set(["service"] as NodeType[]));
-                  setNodeTargets(new Set(["service"] as NodeType[]));
+                  const types = new Set(["service"] as NodeType[]);
+                  setNodeSources(types);
+                  setNodeTargets(types);
                 }}
               >
                 Services
               </ToggleLink>
             </div>
           </div>
-          <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 items-center">
-            <div>
-              <strong>Source</strong>
+          <div className="mt-2 grid grid-flow-col auto-cols-min gap-2 grid-rows-2 items-center">
+            <div className="row-span-2">
+              <strong>Edge</strong>
             </div>
             <div>
               <ToggleLink
                 href="#"
-                toggleOn={nodeSources.has("transaction")}
+                toggleOn={
+                  (nodeSources.has("service") && nodeTargets.has("service")) ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
                 onClick={(event) => {
                   event.preventDefault();
-                  toggleNodeSource("transaction");
+                  const types = new Set(["service"] as NodeType[]);
+                  setNodeSources(types);
+                  setNodeTargets(types);
                 }}
               >
-                Transactions
+                Service-Service
               </ToggleLink>
             </div>
             <div>
               <ToggleLink
                 href="#"
-                toggleOn={nodeSources.has("service")}
+                toggleOn={
+                  (nodeSources.has("transaction") &&
+                    nodeTargets.has("transaction")) ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
                 onClick={(event) => {
                   event.preventDefault();
-                  toggleNodeSource("service");
+                  const types = new Set(["transaction"] as NodeType[]);
+                  setNodeSources(types);
+                  setNodeTargets(types);
                 }}
               >
-                Services
-              </ToggleLink>
-            </div>
-            <div>
-              <strong>Target</strong>
-            </div>
-            <div>
-              <ToggleLink
-                href="#"
-                toggleOn={nodeTargets.has("transaction")}
-                onClick={(event) => {
-                  event.preventDefault();
-                  toggleNodeTarget("transaction");
-                }}
-              >
-                Transactions
+                Transaction-Transaction
               </ToggleLink>
             </div>
             <div>
               <ToggleLink
                 href="#"
-                toggleOn={nodeTargets.has("service")}
+                toggleOn={
+                  (nodeSources.has("service") &&
+                    nodeTargets.has("transaction")) ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
                 onClick={(event) => {
                   event.preventDefault();
-                  toggleNodeTarget("service");
+                  setNodeSources(new Set(["service"] as NodeType[]));
+                  setNodeTargets(new Set(["transaction"] as NodeType[]));
                 }}
               >
-                Services
+                Service-Transaction
+              </ToggleLink>
+            </div>
+            <div>
+              <ToggleLink
+                href="#"
+                toggleOn={
+                  (nodeSources.has("transaction") &&
+                    nodeTargets.has("service")) ||
+                  (nodeSources.size === 0 && nodeTargets.size === 0)
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNodeSources(new Set(["transaction"] as NodeType[]));
+                  setNodeTargets(new Set(["service"] as NodeType[]));
+                }}
+              >
+                Transaction-Service
               </ToggleLink>
             </div>
           </div>
