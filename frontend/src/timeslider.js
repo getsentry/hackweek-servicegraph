@@ -231,7 +231,10 @@ class RangeSlider {
       return d.key - arr[i - 1].key;
     });
 
-    let eachBarWidth = calc.chartWidth / minDiff / (maxX - minX);
+    // console.log("minDiff", minDiff);
+
+    // let eachBarWidth = calc.chartWidth / minDiff / (maxX - minX);
+    let eachBarWidth = calc.chartWidth / (maxX - minX) - 1;
     if (eachBarWidth > 20) {
       eachBarWidth = 20;
     }
@@ -250,6 +253,7 @@ class RangeSlider {
       .domain([max, calc.minY])
       .range([0, calc.chartHeight - 25]);
 
+    // console.log([minX, maxX]);
     const scaleX = d3
       .scaleLinear()
       .domain([minX, maxX])
@@ -339,10 +343,12 @@ class RangeSlider {
       .ticks(max === 1 ? 1 : attrs.yTicks)
       .tickFormat(d3.format(".2s"));
 
+    // console.log("eachBarWidth", eachBarWidth);
     const bars = chart
       .patternify({ tag: "rect", selector: "bar", data: grouped })
       .attr("class", "bar")
       .attr("pointer-events", "none")
+      //   (width / data.length) - 1
       .attr("width", eachBarWidth)
       .attr("height", (d) => scale(d.value))
       .attr("fill", "#424853")
