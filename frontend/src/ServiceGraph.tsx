@@ -3,8 +3,10 @@ import styled from "styled-components";
 import { ErrorBoundary } from "react-error-boundary";
 import { useQuery, QueryErrorResetBoundary } from "react-query";
 import cytoscape from "cytoscape";
+// // @ts-expect-error
+// import cytoscapeCola from "cytoscape-cola";
 // @ts-expect-error
-import cytoscapeCola from "cytoscape-cola";
+import fcose from "cytoscape-fcose";
 import tw from "twin.macro";
 import _ from "lodash";
 import invariant from "invariant";
@@ -43,18 +45,30 @@ const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
 
 function makeLayoutConfig() {
   return {
-    name: "cola",
-    nodeSpacing: function () {
-      return 50;
-    },
-    flow: { axis: "y", minSeparation: 100 },
-    fit: false,
-    maxSimulationTime: 0,
-  } as any;
+    name: "fcose",
+    fit: true,
+    nodeDimensionsIncludeLabels: true,
+    packComponents: false,
+    idealEdgeLength: () => 200,
+    gravity: 0.2,
+    nodeRepulsion: () => 4500 * 1.5,
+    nestingFactor: 0,
+    nodeSeparation: 150,
+  };
+  // return {
+  //   name: "cola",
+  //   nodeSpacing: function () {
+  //     return 50;
+  //   },
+  //   flow: { axis: "y", minSeparation: 100 },
+  //   fit: false,
+  //   maxSimulationTime: 0,
+  // } as any;
 }
 
 try {
-  cytoscape.use(cytoscapeCola);
+  // cytoscape.use(cytoscapeCola);
+  cytoscape.use(fcose);
   cytoscapeNavigator(cytoscape);
   cytoscapeNodeHtmlLabel(cytoscape);
 } catch (_) {
