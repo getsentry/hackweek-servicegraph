@@ -4,11 +4,11 @@ export PYTHON_VERSION := python3
 
 
 up:
-	@docker compose -p "$(COMPOSE_PROJECT_NAME)" up -d
+	@docker-compose -p "$(COMPOSE_PROJECT_NAME)" up -d
 .PHONY: up
 
 down:
-	@docker compose -p "$(COMPOSE_PROJECT_NAME)" down
+	@docker-compose -p "$(COMPOSE_PROJECT_NAME)" down
 .PHONY: down
 
 top:
