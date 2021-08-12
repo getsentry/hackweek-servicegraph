@@ -434,7 +434,18 @@ class ServiceGraphView extends React.Component<Props, State> {
               "background-opacity": 0.9,
             },
           },
-
+          {
+            selector: "node:childless",
+            style: {
+              "border-color": "#1864ab",
+              "background-color": "white",
+              label: "data(name)",
+              "text-valign": "bottom",
+              "background-image": "./cloud.svg",
+              "background-fit": "cover",
+              "background-repeat": "no-repeat",
+            },
+          },
           {
             selector: ":parent",
             style: {
