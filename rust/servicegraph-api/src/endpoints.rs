@@ -5,8 +5,8 @@ use crate::db::{self, get_client};
 use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
-    ActiveNodes, Bucket, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node, NodeQueryParams, ServiceMap,
-    ServiceMapQueryParams,
+    ActiveNodes, Bucket, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
+    NodeQueryParams, ServiceMap, ServiceMapQueryParams,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -63,11 +63,8 @@ pub async fn query_service_map(
 }
 
 #[post("/histogram", format = "json", data = "<params>")]
-pub async fn query_histogram(
-    params: Json<CommonQueryParams>,
-) -> Result<Json<Histogram>, ApiError> {
+pub async fn query_histogram(params: Json<CommonQueryParams>) -> Result<Json<Histogram>, ApiError> {
     let mut client = get_client().await?;
-
 
     Ok(Json(db::query_histogram(&mut client, &params).await?))
 }
