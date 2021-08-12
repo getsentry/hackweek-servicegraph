@@ -1,11 +1,11 @@
-[development]
-address = "localhost"
+[debug]
+address = "127.0.0.1"
 port = 8000
 workers = 2
 log = "normal"
 limits = { forms = 32768 }
 
-[production]
+[release]
 address = "0.0.0.0"
 port = 8000
 workers = 8
