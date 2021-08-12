@@ -34,9 +34,9 @@ def main():
 
 
 def create_main_service():
-    app = Flask("main")
+    app = Flask("Welcome")
 
-    @app.route("/", methods=["POST", "PUT"])
+    @app.route("/", methods=["POST", "PUT"], endpoint="welcome-main")
     def index():
         _log.debug("in main")
         try:
@@ -70,7 +70,7 @@ def create_shop_service():
     app = Flask("shop")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint="shop-main")
     def shop():
         _log.debug("in shop")
 
@@ -100,7 +100,7 @@ def create_payment_service():
     app = Flask("payment")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint="payment-main")
     def payment():
         _log.debug("in payment")
 
@@ -130,7 +130,7 @@ def create_authentication_service():
     app = Flask("authentication")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint="auth-main")
     def authentication():
         _log.debug("in auth")
 
@@ -160,7 +160,7 @@ def create_payment_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint="pay-main")
     def pay():
         _log.debug(f"in payment provider {name}")
         payment_status = random.random()
@@ -179,7 +179,7 @@ def create_auth_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint=f"auth-{name}-main")
     def authenticate():
         _log.debug(f"in payment provider {name}")
         payment_status = random.random()
@@ -198,7 +198,7 @@ def create_warehouse_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"])
+    @app.route('/', methods=["POST", "PUT"], endpoint=f"dep-{name}-main")
     def check_product():
         _log.debug(f"in warehouse {name}")
         payment_status = random.random()
