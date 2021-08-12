@@ -83,6 +83,7 @@ pub struct Edge {
     pub status: EdgeStatus,
     pub n: u32,
     pub description: Option<String>,
+    pub class: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -90,6 +91,7 @@ pub struct CombinedEdge {
     pub from_node_id: Uuid,
     pub to_node_id: Uuid,
     pub description: Option<String>,
+    pub class: Option<String>,
     pub status_ok: u32,
     pub status_expected_error: u32,
     pub status_unexpected_error: u32,
@@ -124,6 +126,7 @@ pub struct Node {
     pub node_type: NodeType,
     pub name: String,
     pub description: Option<String>,
+    pub class: Option<String>,
     pub parent_id: Option<Uuid>,
 }
 

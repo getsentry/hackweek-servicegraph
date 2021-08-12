@@ -121,6 +121,7 @@ fn node_from_row(row: &Row<Complex>, prefix: &str) -> Result<Node, Error> {
         node_type: NodeType::from_u8(row.get(format!("{}node_type", prefix).as_str())?),
         name: row.get(format!("{}node_name", prefix).as_str())?,
         description: row.get(format!("{}node_description", prefix).as_str())?,
+        class: row.get(format!("{}node_class", prefix).as_str())?,
         parent_id: row.get(format!("{}node_parent_id", prefix).as_str())?,
     })
 }
@@ -142,12 +143,15 @@ pub async fn query_graph(
             from_node.node_type as from_node_type,
             from_node.parent_id as from_node_parent_id,
             argMax(from_node.description, from_node.ts) as from_node_description,
+            argMax(from_node.class, from_node.ts) as from_node_class,
             edges.to_node_id as to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
             from_node.parent_id as to_node_parent_id,
             argMax(to_node.description, to_node.ts) as to_node_description,
+            argMax(to_node.class, to_node.ts) as to_node_class,
             argMax(edges.description, edges.ts) as edge_description,
+            argMax(edges.class, edges.ts) as edge_class,
             toUInt32(sumIfMerge(edges.status_ok)) as status_ok,
             toUInt32(sumIfMerge(edges.status_expected_error)) as status_expected_error,
             toUInt32(sumIfMerge(edges.status_unexpected_error)) as status_unexpected_error
@@ -189,12 +193,15 @@ pub async fn query_graph(
                     t.from_node_type as from_node_type,
                     t.from_node_parent_id as from_node_parent_id,
                     t.from_node_description as from_node_description,
+                    t.from_node_class as from_node_class,
                     t.to_node_id as to_node_id,
                     t.to_node_name as to_node_name,
                     t.to_node_type as to_node_type,
                     t.to_node_parent_id as to_node_parent_id,
                     t.to_node_description as to_node_description,
+                    t.to_node_class as to_node_class,
                     t.edge_description as edge_description,
+                    t.edge_class as edge_class,
                     t.status_ok as status_ok,
                     t.status_expected_error as status_expected_error,
                     t.status_unexpected_error as status_unexpected_error
@@ -225,6 +232,7 @@ pub async fn query_graph(
             from_node_id: row.get("from_node_id")?,
             to_node_id: row.get("to_node_id")?,
             description: row.get("edge_description")?,
+            class: row.get("edge_class")?,
             status_ok: status_ok,
             status_expected_error: status_expected_error,
             status_unexpected_error: status_unexpected_error,
@@ -300,7 +308,8 @@ pub async fn query_active_nodes(
                 nodes.name as node_name,
                 nodes.node_type as node_type,
                 nodes.parent_id as node_parent_id,
-                nodes.description as node_description
+                nodes.description as node_description,
+                nodes.class as node_class
             FROM (
                 SELECT
                     s.node_id node_id,
@@ -400,6 +409,7 @@ mod tests {
                 node_type: NodeType::Service,
                 name: format!("service_{}", children_count),
                 description: None,
+                class: None,
                 parent_id: None,
             };
             match children_count {
@@ -411,6 +421,7 @@ mod tests {
                         node_type: NodeType::Transaction,
                         name: format!("transaction_{}", children.len()),
                         description: None,
+                        class: None,
                         parent_id: Some(node.node_id),
                     });
                 }
@@ -422,6 +433,7 @@ mod tests {
                             node_type: NodeType::Transaction,
                             name: format!("transaction_{}", children.len()),
                             description: None,
+                            class: None,
                             parent_id: Some(node.node_id),
                         });
                     }
@@ -434,6 +446,7 @@ mod tests {
                             node_type: NodeType::Transaction,
                             name: format!("transaction_{}", children.len()),
                             description: None,
+                            class: None,
                             parent_id: Some(node.node_id),
                         });
                     }
@@ -534,6 +547,7 @@ mod tests {
                 to_node_id,
                 status,
                 description: Some("calls".into()),
+                class: None,
                 n: count,
             });
 
@@ -547,6 +561,7 @@ mod tests {
                     to_node_id: dst,
                     status,
                     description: Some("calls".into()),
+                    class: None,
                     n: count,
                 });
             }

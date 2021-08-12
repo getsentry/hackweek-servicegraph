@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS servicegraph.nodes (
     node_type UInt8,
     name LowCardinality(String),
     description Nullable(String),
+    class Nullable(String),
     parent_id Nullable(UUID),
     ts DateTime
 ) ENGINE = ReplacingMergeTree(ts)
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS servicegraph.edges (
     from_node_id UUID,
     to_node_id UUID,
     description Nullable(String),
+    class Nullable(String),
     status UInt8,
     n UInt32
 ) ENGINE = MergeTree()
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS servicegraph.edges_by_minute (
     from_node_id UUID,
     to_node_id UUID,
     description Nullable(String),
+    class Nullable(String),
     status_ok AggregateFunction(sumIf, UInt32, UInt8),
     status_expected_error AggregateFunction(sumIf, UInt32, UInt8),
     status_unexpected_error AggregateFunction(sumIf, UInt32, UInt8)
@@ -46,7 +49,8 @@ AS SELECT
     toStartOfMinute(ts) AS ts,
     from_node_id,
     to_node_id,
-    any(description) as description,
+    argMax(description, ts) as description,
+    argMax(class, ts) as class,
     sumIfState(n, status = 1) as status_ok,
     sumIfState(n, status = 2) as status_expected_error,
     sumIfState(n, status = 3) as status_unexpected_error

@@ -62,7 +62,8 @@ Content-Type: application/json
       "name": "human readable name of the node reported in the UI",
       "type": "service | transaction",
       "parent_id": "id of the parent node (eg: service node id) for transactions",
-      "description": "extended human readable description of the node"
+      "description": "extended human readable description of the node",
+      "class": "the optional class of the node"
     }
   ]
 }
@@ -99,7 +100,8 @@ Content-Type: application/json
       "to_node_id": "TO_NODE_ID",
       "status": "status code",
       "n": "how many times did this happen",
-      "description": "extended description of what the edge is"
+      "description": "extended description of what the edge is",
+      "class": "the optional class of the edge"
     }
   ]
 }
