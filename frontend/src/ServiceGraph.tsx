@@ -291,9 +291,9 @@ const preprocessNodeForCytoscape =
 
     let processedNode = nodeToCytoscape(node);
 
-    if (node.node_id.endsWith("-ghost")) {
-      processedNode = ghostNodeToCytoscape(node);
-    }
+    // if (node.node_id.endsWith("-ghost")) {
+    //   processedNode = ghostNodeToCytoscape(node);
+    // }
 
     if (last_activity) {
       processedNode.data["last_activity"] = last_activity;
