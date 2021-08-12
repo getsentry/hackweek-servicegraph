@@ -614,6 +614,8 @@ class ServiceGraphView extends React.Component<Props, State> {
               label: "data(name)",
               "text-valign": "bottom",
               "background-opacity": 0.9,
+              "font-family": "Roboto Mono",
+              "font-size": "12px",
             },
           },
           {
