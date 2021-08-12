@@ -151,7 +151,7 @@ pub async fn query_graph(
             edges.to_node_id as to_node_id,
             to_node.name as to_node_name,
             to_node.node_type as to_node_type,
-            from_node.parent_id as to_node_parent_id,
+            to_node.parent_id as to_node_parent_id,
             argMax(to_node.description, to_node.ts) as to_node_description,
             argMax(to_node.class, to_node.ts) as to_node_class,
             argMax(edges.description, edges.ts) as edge_description,
