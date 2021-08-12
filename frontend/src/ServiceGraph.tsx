@@ -31,6 +31,8 @@ import {
   LastActivity,
 } from "./types";
 
+import colors from "./colors";
+
 import RangeSliderComponent from "./RangeSliderComponent";
 
 // https://github.com/cytoscape/cytoscape.js-navigator
@@ -581,7 +583,6 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node",
             style: {
-              "background-color": "#1864ab",
               label: "data(name)",
               "text-valign": "bottom",
               "background-opacity": 0.9,
@@ -590,18 +591,18 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node[inactive]",
             style: {
-              "background-color": "#ced4da",
-              "border-color": "#ced4da",
+              "background-color": colors.INACTIVE_NODE,
+              "border-color": colors.INACTIVE_NODE,
               opacity: 0.5,
             },
           },
           {
             selector: "node:childless",
             style: {
-              "border-color": "black",
+              "border-color": colors.TRANSACTION_NODE_BORDER,
               "border-width": 1,
               "border-style": "solid",
-              "background-color": "white",
+              "background-color": colors.TRANSACTION_NODE_BG,
               label: "data(name)",
               "text-valign": "bottom",
               // "background-image": "./cloud.svg",
@@ -632,15 +633,16 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: ":parent",
             style: {
-              "background-color": "#d0ebff",
-              "border-color": "#1864ab",
+              "background-color": colors.SERVICE_NODE_BG,
+              "border-color": colors.SERVICE_NODE_BORDER,
               "text-valign": "bottom",
             },
           },
           {
             selector: "edge",
             style: {
-              "line-color": "#bdd3d4",
+              "line-color": colors.EDGE_HEALTHY,
+              "target-arrow-color": colors.EDGE_HEALTHY,
               "curve-style": "bezier",
               "target-arrow-shape": "triangle",
             },
@@ -648,22 +650,22 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: 'edge[group="unhealthy"]',
             style: {
-              "line-color": "#ffbdb4",
-              "target-arrow-color": "#ffbdb4",
+              "line-color": colors.EDGE_UNHEALTHY,
+              "target-arrow-color": colors.EDGE_UNHEALTHY,
             },
           },
           {
             selector: 'node[group="unhealthy"]',
             style: {
               "border-width": 2,
-              "border-color": "#ff0000",
+              "border-color": colors.NODE_UNHEALTHY_BORDER,
             },
           },
           {
             selector: "node:selected",
             style: {
-              "background-color": "#33ff00",
-              "border-color": "#22ee00",
+              "background-color": colors.SELECTED,
+              "border-color": colors.SELECTED_BORDER,
               "background-opacity": 0.7,
             },
           },
@@ -679,7 +681,7 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node.fixed:selected",
             style: {
-              "background-color": "#33ff00",
+              "background-color": colors.SELECTED,
             },
           },
 
@@ -694,7 +696,7 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node.alignment:selected",
             style: {
-              "background-color": "#33ff00",
+              "background-color": colors.SELECTED,
             },
           },
 
@@ -709,15 +711,15 @@ class ServiceGraphView extends React.Component<Props, State> {
           {
             selector: "node.relative:selected",
             style: {
-              "background-color": "#33ff00",
+              "background-color": colors.SELECTED,
             },
           },
 
           {
             selector: "edge:selected",
             style: {
-              "line-color": "#33ff00",
-              "target-arrow-color": "#33ff00",
+              "line-color": colors.SELECTED,
+              "target-arrow-color": colors.SELECTED,
             },
           },
         ],
