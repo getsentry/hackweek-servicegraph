@@ -133,7 +133,13 @@ function isUnhealthy(
   return false;
 }
 
-function NodeDetails({ node }: { node: Node | undefined }) {
+function NodeDetails({
+  node,
+  last_activity,
+}: {
+  node: Node | undefined;
+  last_activity: LastActivity | undefined;
+}) {
   if (!node) {
     return null;
   }
@@ -145,6 +151,7 @@ function NodeDetails({ node }: { node: Node | undefined }) {
       <div>Type: {node.node_type}</div>
       <div>Description: {node.description || "none"}</div>
       <div>Class: {node.class || "generic"}</div>
+      <div>Last activity: {last_activity || "unknown"}</div>
       <div>✅ Ok: {node.status_ok}</div>
       <div>🛑 Expected error: {node.status_expected_error}</div>
       <div>🔥 Unexpected error: {node.status_unexpected_error}</div>
@@ -156,12 +163,13 @@ type DetailsPayloadDereferenced =
   | {
       type: "node";
       payload: Node;
+      last_activity: LastActivity | undefined;
     }
   | {
       type: "edge";
       payload: CombinedEdge;
-      source: Node;
-      destination: Node;
+      source: { node: Node; last_activity: LastActivity | undefined };
+      destination: { node: Node; last_activity: LastActivity | undefined };
     };
 
 function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
@@ -179,7 +187,7 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
 
   if (details.type === "node") {
     const node = details.payload;
-    return <NodeDetails node={node} />;
+    return <NodeDetails node={node} last_activity={details.last_activity} />;
   }
 
   const edge = details.payload;
@@ -187,10 +195,13 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
   return (
     <div className="grid grid-cols-1">
       <strong>Source</strong>
-      <NodeDetails node={source} />
+      <NodeDetails node={source.node} last_activity={source.last_activity} />
       <hr />
       <strong>Destination</strong>
-      <NodeDetails node={destination} />
+      <NodeDetails
+        node={destination.node}
+        last_activity={destination.last_activity}
+      />
       <hr />
       <div>Description: {edge.description || "none"}</div>
       <div>Class: {edge.class || "generic"}</div>
@@ -274,12 +285,21 @@ function ghostNodeToCytoscape(node: Node): cytoscape.NodeDefinition {
 }
 
 const preprocessNodeForCytoscape =
-  (callback: (x: cytoscape.NodeDefinition) => void) => (node: Node) => {
+  (callback: (x: cytoscape.NodeDefinition) => void) =>
+  (props: { node: Node; last_activity: LastActivity | undefined }) => {
+    const { node, last_activity } = props;
+
+    let processedNode = nodeToCytoscape(node);
+
     if (node.node_id.endsWith("-ghost")) {
-      callback(ghostNodeToCytoscape(node));
-    } else {
-      callback(nodeToCytoscape(node));
+      processedNode = ghostNodeToCytoscape(node);
     }
+
+    if (last_activity) {
+      processedNode.data["last_activity"] = last_activity;
+    }
+
+    callback(processedNode);
   };
 
 function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
@@ -475,6 +495,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         staging,
         nodes: nodesMap,
         edges: edgesMap,
+        node_activities,
       };
     }
 
@@ -505,7 +526,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         if (node) {
           preprocessNodeForCytoscape((node) => {
             nodes.push(node);
-          })(node);
+          })({ node, last_activity: this.state.node_activities.get(node_id) });
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -526,7 +547,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         maxZoom: 1,
         style: [
           {
-            selector: "node",
+            selector: "node[last_activity]",
             style: {
               "background-color": "#1864ab",
               label: "data(name)",
@@ -551,6 +572,14 @@ class ServiceGraphView extends React.Component<Props, State> {
             selector: 'node[group="ghost"]',
             style: {
               visibility: "hidden",
+            },
+          },
+          {
+            selector: "node[^last_activity]",
+            style: {
+              "background-color": "#ced4da",
+              "border-color": "#ced4da",
+              opacity: 0.2,
             },
           },
           {
@@ -841,7 +870,7 @@ class ServiceGraphView extends React.Component<Props, State> {
 
           preprocessNodeForCytoscape((node) => {
             this.graph?.add(node);
-          })(node);
+          })({ node, last_activity: this.state.node_activities.get(node_id) });
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -874,7 +903,10 @@ class ServiceGraphView extends React.Component<Props, State> {
         if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
           preprocessNodeForCytoscape((node) => {
             this.graph?.add(node);
-          })(node);
+          })({
+            node,
+            last_activity: this.state.node_activities.get(node.node_id),
+          });
         }
 
         if (node.parent_id) {
@@ -917,9 +949,12 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       this.graph?.remove(`*`);
 
-      this.state.nodes.forEach(
+      this.state.nodes.forEach((node) =>
         preprocessNodeForCytoscape((node) => {
           this.graph?.add(node);
+        })({
+          node,
+          last_activity: this.state.node_activities.get(node.node_id),
         })
       );
       this.state.edges.forEach((edge) => {
@@ -972,6 +1007,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         return {
           type: "node",
           payload: node,
+          last_activity: this.state.node_activities.get(node.node_id),
         };
       }
     }
@@ -989,8 +1025,16 @@ class ServiceGraphView extends React.Component<Props, State> {
         return {
           type: "edge",
           payload: edge,
-          source: sourceNode,
-          destination: destinationNode,
+          source: {
+            node: sourceNode,
+            last_activity: this.state.node_activities.get(sourceNode.node_id),
+          },
+          destination: {
+            node: destinationNode,
+            last_activity: this.state.node_activities.get(
+              destinationNode.node_id
+            ),
+          },
         };
       }
     }
