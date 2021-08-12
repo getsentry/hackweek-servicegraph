@@ -472,7 +472,9 @@ class ServiceGraphView extends React.Component<Props, State> {
     });
 
     // Get serviceNodes that are not parents
-    const childlessServiceNodes: string[] = Array.from(serviceNodes).filter(id => !parents.has(id))
+    const childlessServiceNodes: string[] = Array.from(serviceNodes).filter(
+      (id) => !parents.has(id)
+    );
     childlessServiceNodes.forEach((nodeId) => {
       const node = nodesMap.get(nodeId);
       if (node) {
@@ -480,7 +482,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         nodesMap.set(ghostNode.node_id, ghostNode);
         staging.add.nodes.add(ghostNode.node_id);
       }
-    })
+    });
 
     // add any active nodes and mark stale active node to be removed from the cytoscape graph
     activeNodes.nodes.forEach((node) => {
@@ -1396,9 +1398,9 @@ class ServiceGraphView extends React.Component<Props, State> {
                 Reset
               </ToggleLink>
             </div>
-            <div className="">
+            <div style={{ minWidth: "200px" }}>
               <strong>
-                <small>Traffic Volume</small>
+                <small>Traffic Volume - {trafficVolumeFilter}%</small>
               </strong>
               <input
                 type="range"
