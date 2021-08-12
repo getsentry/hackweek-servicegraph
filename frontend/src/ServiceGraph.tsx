@@ -447,20 +447,35 @@ class ServiceGraphView extends React.Component<Props, State> {
 
     // add any new nodes and mark stale nodes to be removed from the cytoscape graph
 
+    const parents = new Set();
+    const serviceNodes: Set<string> = new Set();
+
     data.nodes.forEach((node) => {
       // update nodes dictionary with latest node information
       nodesMap.set(node.node_id, node);
 
       if (node.node_type === "service" && !node.parent_id) {
-        const ghostNode = createGhostNode(node);
-        nodesMap.set(ghostNode.node_id, ghostNode);
-        staging.add.nodes.add(ghostNode.node_id);
+        serviceNodes.add(node.node_id);
+      }
+      if (node.node_type === "transaction" && node.parent_id) {
+        parents.add(node.parent_id);
       }
 
       // assume node is new; if it is not new, then it'll be removed from staging
       // when prevState.committed.nodes is traversed
       staging.add.nodes.add(node.node_id);
     });
+
+    // Get serviceNodes that are not parents
+    const childlessServiceNodes: string[] = Array.from(serviceNodes).filter(id => !parents.has(id))
+    childlessServiceNodes.forEach((nodeId) => {
+      const node = nodesMap.get(nodeId);
+      if (node) {
+        const ghostNode = createGhostNode(node);
+        nodesMap.set(ghostNode.node_id, ghostNode);
+        staging.add.nodes.add(ghostNode.node_id);
+      }
+    })
 
     // add any active nodes and mark stale active node to be removed from the cytoscape graph
     activeNodes.nodes.forEach((node) => {
