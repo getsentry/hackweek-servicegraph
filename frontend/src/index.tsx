@@ -11,7 +11,8 @@ import colors from "./colors";
 
 const GlobalStyle = createGlobalStyle`
   body {
-    ${tw`font-sans bg-gray-100`}
+    font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    ${tw`bg-gray-100`}
   }
 
   .cytoscape-navigatorOverlay {
