@@ -1,4 +1,7 @@
-# hackweek-servicegraph
+<p align="center">
+  <img src="https://github.com/getsentry/hackweek-servicegraph/blob/master/artwork/logo.png?raw=true" alt="servicegraph" width="700">
+</p>
+
 
 servicegraph is a simple system that helps creating a map of interactions of different
 pieces in a system and how it behaves.
