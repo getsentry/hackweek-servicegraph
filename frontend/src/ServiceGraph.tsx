@@ -352,7 +352,7 @@ const preprocessNodeForCytoscape =
           start: subHours(new Date(), 1),
           end: new Date(),
         });
-        console.log("isActive", isActive);
+        // console.log("isActive", isActive);
         if (!isActive) {
           processedNode.data["inactive"] = "foo";
         }
@@ -1142,8 +1142,8 @@ class ServiceGraphView extends React.Component<Props, State> {
     const minVolume = Math.min(...volumes);
     const maxVolume = Math.max(...volumes);
 
-    console.log("minVolume", minVolume);
-    console.log("maxVolume", maxVolume);
+    // console.log("minVolume", minVolume);
+    // console.log("maxVolume", maxVolume);
 
     const percentage = (volume: number) => {
       if (maxVolume - minVolume === 0) {
