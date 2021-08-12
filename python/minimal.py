@@ -87,13 +87,13 @@ class Client(object):
         return service_id, endpoint_id
 
     def get_graph_context_header(self):
-        service_id = self._service_id.get()
+        service_id = self._service_id.get(None)
         if service_id is None:
             return None
 
         rv = "service-node=%s" % service_id
 
-        transaction_id = self._transaction_id.get()
+        transaction_id = self._transaction_id.get(None)
         if transaction_id is not None:
             rv = "%s transaction-node=%s" % (rv, transaction_id)
 
