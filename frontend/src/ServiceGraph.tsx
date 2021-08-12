@@ -224,6 +224,16 @@ function nodeToCytoscape(node: Node): cytoscape.NodeDefinition {
   };
 }
 
+function ghostNodeToCytoscape(node: Node): cytoscape.NodeDefinition {
+  return {
+    data: {
+      id: `${node.node_id}-ghost`,
+      parent: node.node_id,
+      group: "ghost",
+    }
+  }
+}
+
 function edgeToCytoscape(edge: CombinedEdge): cytoscape.EdgeDefinition {
   return {
     data: {
@@ -406,6 +416,9 @@ class ServiceGraphView extends React.Component<Props, State> {
         const node = this.state.nodes.get(node_id);
         if (node) {
           nodes.push(nodeToCytoscape(node));
+          if (node.node_type === "service") {
+            nodes.push(ghostNodeToCytoscape(node))
+          }
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -444,6 +457,12 @@ class ServiceGraphView extends React.Component<Props, State> {
               "background-image": "./cloud.svg",
               "background-fit": "cover",
               "background-repeat": "no-repeat",
+            },
+          },
+          {
+            selector: 'node[group="ghost"]',
+            style: {
+              display: "none",
             },
           },
           {
@@ -732,6 +751,11 @@ class ServiceGraphView extends React.Component<Props, State> {
         if (node) {
           committed.nodes.add(node_id);
           this.graph?.add(nodeToCytoscape(node));
+
+          if (node.node_type === "service") {
+            this.graph?.add(ghostNodeToCytoscape(node))
+          }
+
         } else {
           throw Error(`unable to find node: ${node_id}`);
         }
@@ -763,6 +787,9 @@ class ServiceGraphView extends React.Component<Props, State> {
       this.state.nodes.forEach((node) => {
         if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
           this.graph?.add(nodeToCytoscape(node));
+          if (node.node_type === "service") {
+            this.graph?.add(ghostNodeToCytoscape(node))
+          }
         }
 
         if (node.parent_id) {
