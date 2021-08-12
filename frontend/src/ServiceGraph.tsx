@@ -1145,11 +1145,21 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       const cytoscapeEdge = edgeToCytoscape(edge);
 
-      this.graph
-        ?.elements(
-          `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
-        )
-        .style("width", lerp(1, 10, percentage(volume)));
+      // only apple width for transaction to transaciton
+      const sourceNode = this.state.nodes.get(cytoscapeEdge.data.source);
+      const targetNode = this.state.nodes.get(cytoscapeEdge.data.target);
+      if (
+        sourceNode &&
+        targetNode &&
+        sourceNode.node_type === "transaction" &&
+        targetNode.node_type === "transaction"
+      ) {
+        this.graph
+          ?.elements(
+            `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
+          )
+          .style("width", lerp(1, 10, percentage(volume)));
+      }
     });
   };
 
