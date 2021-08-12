@@ -42,6 +42,8 @@ pub async fn register_nodes(
         .column("node_type", colvec!(nodes, |x| x.node_type.as_u8()))
         .column("name", colvec!(nodes, |x| x.name.clone()))
         .column("parent_id", colvec!(nodes, |x| x.parent_id))
+        .column("description", colvec!(nodes, |x| x.description.clone()))
+        .column("class", colvec!(nodes, |x| x.class.clone()))
         .column("ts", vec![now; nodes.len()]);
     client.insert("nodes", block).await?;
     Ok(())
@@ -58,6 +60,8 @@ pub async fn register_edges(
         .column("from_node_id", colvec!(edges, |x| x.from_node_id))
         .column("to_node_id", colvec!(edges, |x| x.to_node_id))
         .column("status", colvec!(edges, |x| x.status.as_u8()))
+        .column("description", colvec!(edges, |x| x.description.clone()))
+        .column("class", colvec!(edges, |x| x.class.clone()))
         .column("n", colvec!(edges, |x| x.n.min(1)));
     client.insert("edges", block).await?;
     Ok(())
