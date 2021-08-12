@@ -859,6 +859,19 @@ class ServiceGraphView extends React.Component<Props, State> {
         }
       });
 
+      // TODO: simplify?
+      this.graph?.remove(`*`);
+      this.state.nodes.forEach((node) => {
+        if (node.node_id.endsWith("-ghost")) {
+          this.graph?.add(ghostNodeToCytoscape(node));
+        } else {
+          this.graph?.add(nodeToCytoscape(node));
+        }
+      });
+      this.state.edges.forEach((edge) => {
+        this.graph?.add(edgeToCytoscape(edge));
+      });
+
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
 
