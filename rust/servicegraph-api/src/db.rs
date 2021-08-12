@@ -364,10 +364,6 @@ pub async fn query_histogram(
             AND ts <= toDateTime('{end_date}')
             GROUP BY ts
             ORDER BY ts
-            WITH FILL
-                FROM toDateTime('{start_date}')
-                TO toDateTime('{end_date}')
-                STEP 60
             "#,
             project_id = params.project_id,
             start_date = start_date_bound.format("%Y-%m-%d %H:%M:%S"),
