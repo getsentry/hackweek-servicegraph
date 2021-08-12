@@ -1412,7 +1412,7 @@ const Controls = styled.div`
 const TimerangeContainer = styled.div`
   position: absolute;
   bottom: 8px;
-  left: 56px;
+  left: 5px;
   width: 600px;
 `;
 
