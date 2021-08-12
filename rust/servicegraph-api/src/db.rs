@@ -58,7 +58,7 @@ pub async fn register_edges(
         .column("from_node_id", colvec!(edges, |x| x.from_node_id))
         .column("to_node_id", colvec!(edges, |x| x.to_node_id))
         .column("status", colvec!(edges, |x| x.status.as_u8()))
-        .column("n", colvec!(edges, |x| x.n));
+        .column("n", colvec!(edges, |x| x.n.min(1)));
     client.insert("edges", block).await?;
     Ok(())
 }
