@@ -139,6 +139,7 @@ function NodeDetails({ node }: { node: Node | undefined }) {
     <div>
       <div>Name: {node.name}</div>
       <div>Node Id: {node.node_id}</div>
+      <div>Parent Id: {node.parent_id ?? "none"}</div>
       <div>Type: {node.node_type}</div>
       <div>✅ Ok: {node.status_ok}</div>
       <div>🛑 Expected error: {node.status_expected_error}</div>
