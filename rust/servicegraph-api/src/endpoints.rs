@@ -10,7 +10,7 @@ use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
     ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
-    NodeQueryParams, ServiceMap, ServiceMapQueryParams,
+    NodeQueryParams, NodeType, ServiceMap, ServiceMapQueryParams,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -59,6 +59,53 @@ pub async fn query_service_map(
 
     let graph = db::query_graph(&mut client, &params.clone().into()).await?;
     let active_nodes = db::query_active_nodes(&mut client, &params.clone().into()).await?;
+
+    let edges: Vec<CombinedEdge> = graph
+        .edges
+        .clone()
+        .into_iter()
+        .filter(|edge| {
+            let source_node = graph
+                .nodes
+                .iter()
+                .find(|node| node.node.node_id == edge.from_node_id);
+            let target_node = graph
+                .nodes
+                .iter()
+                .find(|node| node.node.node_id == edge.to_node_id);
+            if let Some(source_node) = source_node {
+                if let Some(target_node) = target_node {
+                    let service_to_service = source_node.node.node_type == NodeType::Service
+                        && target_node.node.node_type == NodeType::Service;
+                    let service_to_transaction = source_node.node.node_type == NodeType::Service
+                        && target_node.node.node_type == NodeType::Transaction;
+                    if service_to_service || service_to_transaction {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        })
+        .collect();
+
+    // let keep_nodes: BTreeSet<Uuid> =
+    //     edges
+    //         .iter()
+    //         .fold(BTreeSet::new(), |mut acc: BTreeSet<Uuid>, edge| {
+    //             acc.insert(edge.from_node_id);
+    //             acc.insert(edge.to_node_id);
+    //             return acc;
+    //         });
+
+    // let nodes = graph
+    //     .nodes
+    //     .into_iter()
+    //     .filter(|node| {
+    //         return keep_nodes.contains(&node.node.node_id);
+    //     })
+    //     .collect();
+
+    let graph = Graph { edges, nodes: graph.nodes };
 
     if let Some(volume_filter) = params.traffic_volume {
         let mut volume_filter = cmp::min(volume_filter, 100);
