@@ -13,7 +13,7 @@ from provider_names import departments, payment_providers, authentication_provid
 _log = logging.getLogger("main")
 REPORTING_PORT = 8000
 APP_PORT = 5000
-SERVICE_NS = uuid.UUID('13f07817-8ccb-4961-8507-1a3e6fd02066')
+SERVICE_NS = uuid.UUID("13f07817-8ccb-4961-8507-1a3e6fd02066")
 minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 
 
@@ -29,14 +29,21 @@ def main():
     add_warehouses(apps)
 
     app = DispatcherMiddleware(create_main_service(), apps)
-    run_simple('localhost', APP_PORT, app,
-               use_reloader=True, use_debugger=False, use_evalex=True, threaded=True)
+    run_simple(
+        "localhost",
+        APP_PORT,
+        app,
+        use_reloader=True,
+        use_debugger=False,
+        use_evalex=True,
+        threaded=True,
+    )
 
 
 def create_main_service():
-    app = Flask("Welcome")
+    app = Flask("welcome")
 
-    @app.route("/", methods=["POST", "PUT"], endpoint="welcome-main")
+    @app.route("/", methods=["POST", "PUT"], endpoint="index")
     def index():
         _log.debug("in main")
         try:
@@ -44,7 +51,7 @@ def create_main_service():
         except:
             return "invalid request", 400
 
-        if not req.get('auth'):
+        if not req.get("auth"):
             # we are not authenticated authenticate
             resp = requests.post(to_url("auth/"), json=req)
 
@@ -53,12 +60,12 @@ def create_main_service():
                 return "failed to login", 401
         return ""
 
-    @app.route("/browse", methods=["POST", "PUT"], endpoint="welcome-browse")
+    @app.route("/browse", methods=["POST", "PUT"], endpoint="browse")
     def browse():
         resp = requests.post(to_url("shop/"), json=request.json)
         return from_response(resp)
 
-    @app.route("/cart", methods=["POST", "PUT"], endpoint="welcome-shopping-cart")
+    @app.route("/cart", methods=["POST", "PUT"], endpoint="shopping-cart")
     def browse():
         resp = requests.post(to_url("pay/"), json=request.json)
         return from_response(resp)
@@ -70,7 +77,7 @@ def create_shop_service():
     app = Flask("shop")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint="shop-main")
+    @app.route("/", methods=["POST", "PUT"], endpoint="overview")
     def shop():
         _log.debug("in shop")
 
@@ -100,7 +107,7 @@ def create_payment_service():
     app = Flask("payment")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint="payment-main")
+    @app.route("/", methods=["POST", "PUT"], endpoint="submit-payment")
     def payment():
         _log.debug("in payment")
 
@@ -139,7 +146,7 @@ def create_authentication_service():
     app = Flask("authentication")
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint="auth-main")
+    @app.route("/", methods=["POST", "PUT"], endpoint="authenticate")
     def authentication():
         _log.debug("in auth")
 
@@ -157,7 +164,6 @@ def create_authentication_service():
             _log.debug(f"invalid auth provider {auth_provider}")
             return "invalid authenticator provider", 400
 
-
         # first stage auth
         resp = requests.post(to_url(f"auth/{auth_provider}/credentials"), json=req)
         if resp.ok:
@@ -173,12 +179,12 @@ def create_payment_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/check', methods=["POST", "PUT"], endpoint="pay-check-account")
+    @app.route("/check", methods=["POST", "PUT"], endpoint="check-account")
     def check_account():
         _log.debug("in check account")
         return "checked"
 
-    @app.route("/validate", methods=["POST", "PUT"], endpoint="pay-validate")
+    @app.route("/validate", methods=["POST", "PUT"], endpoint="validate")
     def validate():
         _log.debug("in validate")
         payment_status = random.random()
@@ -190,7 +196,7 @@ def create_payment_provider_service(name):
         else:
             return "Provider is experiencing some difficulties", 500
 
-    @app.route("/transfer", methods=["POST", "PUT"], endpoint="pay-transfer")
+    @app.route("/transfer", methods=["POST", "PUT"], endpoint="transfer")
     def transfer():
         _log.debug("in check transfer")
         return "ok"
@@ -202,7 +208,9 @@ def create_auth_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/credentials', methods=["POST", "PUT"], endpoint=f"auth-{name}-credentials")
+    @app.route(
+        "/credentials", methods=["POST", "PUT"], endpoint=f"auth-{name}-credentials"
+    )
     def authenticate():
         _log.debug(f"in payment provider {name}")
         payment_status = random.random()
@@ -214,10 +222,8 @@ def create_auth_provider_service(name):
         else:
             return "Provider is experiencing some difficulties", 500
 
-    return app
-
-    @app.route('/2fa', methods=["POST", "PUT"], endpoint=f"auth-{name}-2fa")
-    def authenticate():
+    @app.route("/2fa", methods=["POST", "PUT"], endpoint=f"2fa")
+    def mfa():
         _log.debug(f"in payment provider {name}")
         payment_status = random.random()
 
@@ -235,7 +241,7 @@ def create_warehouse_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route('/', methods=["POST", "PUT"], endpoint=f"dep-{name}-main")
+    @app.route("/", methods=["POST", "PUT"], endpoint=f"list-products")
     def check_product():
         _log.debug(f"in warehouse {name}")
         payment_status = random.random()
@@ -262,7 +268,7 @@ def _configure_logging():
     ch.setLevel(logging.DEBUG)
 
     # create formatter
-    formatter = logging.Formatter('\n %(asctime)s: \n %(message)s')
+    formatter = logging.Formatter("\n %(asctime)s: \n %(message)s")
 
     # add formatter to ch
     ch.setFormatter(formatter)
@@ -293,7 +299,6 @@ def add_warehouses(apps):
         apps[f"/shop/{departament.lower()}"] = create_warehouse_service(departament)
 
 
-
 def from_response(response):
     """Convert a requests response to a flask response"""
     return response.text, response.status_code
@@ -313,5 +318,5 @@ def to_url(relative):
     return ret_val
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

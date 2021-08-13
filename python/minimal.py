@@ -6,21 +6,12 @@ import atexit
 import socket
 
 from datetime import datetime
-from contextvars import ContextVar
+from contextvars import ContextVar, copy_context
+from contextlib import contextmanager
 from urllib.request import urlopen, Request
 
 SERVICE_NS = uuid.UUID("50e1147a-2643-4b97-a0bd-be87f84851c3")
-
-
-def init(host=None, port=None, project_id=None, service_ns=None):
-    if host is not None:
-        client.host = host
-    if port is not None:
-        client.port = port
-    if project_id is not None:
-        client.project_id = project_id
-    if service_ns is not None:
-        client.service_ns = service_ns
+EXTERNAL_NS = uuid.UUID("8f211529-1b79-4d02-9b34-44bbffdc54fa")
 
 
 class Client(object):
@@ -34,6 +25,7 @@ class Client(object):
         self.pending_nodes = {}
         self.known_nodes = {}
         self._lock = threading.Lock()
+        self.instrumentations_disabled = False
 
         self._service_id = ContextVar("service_id")
         self._transaction_id = ContextVar("transaction_id")
@@ -41,6 +33,15 @@ class Client(object):
         thread = threading.Thread(target=self._flush_loop)
         thread.daemon = True
         thread.start()
+
+    @contextmanager
+    def disabled_instrumentations(self):
+        old = self.instrumentations_disabled
+        self.instrumentations_disabled = True
+        try:
+            yield
+        finally:
+            self.instrumentations_disabled = old
 
     def report_self(
         self,
@@ -78,11 +79,11 @@ class Client(object):
 
     def _flush_loop(self):
         while True:
-            time.sleep(30)
+            time.sleep(1)
             self.flush()
 
     def get_self_nodes(self):
-        service_id = self._service_id.get()
+        service_id = self._service_id.get(None)
         endpoint_id = self._endpoint_id.get()
         return service_id, endpoint_id
 
@@ -100,7 +101,7 @@ class Client(object):
         return rv
 
     def iter_from_nodes(self):
-        service_id = self._service_id.get()
+        service_id = self._service_id.get(None)
         if service_id is not None:
             yield service_id
             transaction_id = self._transaction_id.get()
@@ -130,19 +131,25 @@ class Client(object):
                     edge.update(edge_meta)
                 edges.append(edge)
 
-        urlopen(
-            Request(
-                url="http://%s:%d/submit/" % (self.host, self.port),
-                headers={"content-type": "application/json"},
-                method="POST",
-                data=bytes(
-                    json.dumps(
-                        {"nodes": nodes, "edges": edges, "project_id": self.project_id}
-                    ),
-                    "utf-8",
-                ),
-            )
-        )
+        if nodes or edges:
+            with self.disabled_instrumentations():
+                urlopen(
+                    Request(
+                        url="http://%s:%d/submit/" % (self.host, self.port),
+                        headers={"content-type": "application/json"},
+                        method="POST",
+                        data=bytes(
+                            json.dumps(
+                                {
+                                    "nodes": nodes,
+                                    "edges": edges,
+                                    "project_id": self.project_id,
+                                }
+                            ),
+                            "utf-8",
+                        ),
+                    )
+                )
 
         self.pending_edges_meta = {}
         self.pending_edges = {}
@@ -237,6 +244,9 @@ def _patch_httplib():
     real_getresponse = HTTPConnection.getresponse
 
     def putrequest(self, method, url, *args, **kwargs):
+        if client.instrumentations_disabled:
+            return real_putrequest(self, method, url, *args, **kwargs)
+
         host = self.host
         port = self.port
         default_port = self.default_port
@@ -250,24 +260,26 @@ def _patch_httplib():
                 url,
             )
 
+        print("REQUEST", real_url, "FROM", client._transaction_id.get(None))
         rv = real_putrequest(self, method, url, *args, **kwargs)
-        self._servicegraph_url = real_url
+
+        if not client.instrumentations_disabled:
+            self._servicegraph_info = (real_url, host)
 
         return rv
 
     def getresponse(self, *args, **kwargs):
-        url = getattr(self, "_servicegraph_url", None)
+        info = getattr(self, "_servicegraph_info", None)
 
-        if url is None:
+        if info is None:
             return real_getresponse(self, *args, **kwargs)
 
+        url, host = info
         rv = real_getresponse(self, *args, **kwargs)
 
         graph_context = parse_graph_context_header(
             rv.headers.get("servicegraph-context") or ""
         )
-        if not graph_context:
-            return rv
 
         if rv.status >= 400 and rv.status < 500:
             status = "expected_error"
@@ -276,15 +288,33 @@ def _patch_httplib():
         else:
             status = "ok"
 
-        for to_node in graph_context.values():
-            for from_node in client.iter_from_nodes():
-                client.report_edge(
-                    from_node=from_node,
-                    to_node=to_node,
-                    status=status,
-                    description=url,
-                    class_="http-request",
-                )
+        from_nodes = list(client.iter_from_nodes())
+        if from_nodes:
+
+            # connections to an instrumented node
+            if graph_context:
+                to_nodes = graph_context.values()
+
+            # connections to uninstrumented nodes
+            else:
+                to_nodes = [
+                    client.report_node(
+                        name="external:" + host,
+                        type="service",
+                        description=url,
+                        class_="http-request",
+                    )
+                ]
+
+            for to_node in to_nodes:
+                for from_node in from_nodes:
+                    client.report_edge(
+                        from_node=from_node,
+                        to_node=to_node,
+                        status=status,
+                        description=url,
+                        class_="http-request",
+                    )
 
         return rv
 
@@ -299,15 +329,18 @@ def _patch_flask():
     old_full_dispatch_request = Flask.full_dispatch_request
 
     def patched_full_dispatch_request(self):
-        client.report_self(
-            service_name=self.import_name,
-            transaction_name=request.endpoint,
-            service_description="flask application",
-            service_class="python http",
-            transaction_description="flask web handler",
-            transaction_class="python http",
-        )
-        return old_full_dispatch_request(self)
+        def run_reported():
+            client.report_self(
+                service_name=self.import_name,
+                transaction_name=request.endpoint,
+                service_description="flask application",
+                service_class="python http",
+                transaction_description="flask web handler",
+                transaction_class="python http",
+            )
+            return old_full_dispatch_request(self)
+
+        return copy_context().run(run_reported)
 
     def patched_process_response(self, response):
         response = old_process_response(self, response)
@@ -326,3 +359,14 @@ def _register_atexit():
 _patch_httplib()
 _patch_flask()
 _register_atexit()
+
+
+def init(host=None, port=None, project_id=None, service_ns=None):
+    if host is not None:
+        client.host = host
+    if port is not None:
+        client.port = port
+    if project_id is not None:
+        client.project_id = project_id
+    if service_ns is not None:
+        client.service_ns = service_ns

@@ -42,7 +42,8 @@ import RangeSliderComponent from "./RangeSliderComponent";
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
-const API_PATH = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api" : "api";
+const API_PATH =
+  process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api" : "api";
 
 const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
 
@@ -291,17 +292,17 @@ const DetailsPanel = styled.div`
 `;
 
 const ButtonLink = styled.a`
-  ${tw`whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700`};
+  ${tw`whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-red-600 hover:bg-red-700`};
 `;
 const ToggleLink = styled.a<{ toggleOn: boolean }>`
   ${tw`whitespace-nowrap inline-flex items-center justify-center px-1 py-1 border rounded-md shadow-sm text-xs font-medium text-white `};
 
   ${(p) => {
     if (p.toggleOn) {
-      return tw`border-transparent bg-blue-600 hover:bg-blue-700`;
+      return tw`border-transparent bg-red-600 hover:bg-red-700`;
     }
 
-    return tw`bg-white text-blue-700 border-blue-700 hover:bg-blue-100`;
+    return tw`bg-white text-red-700 border-red-700 hover:bg-red-100`;
   }}
 `;
 

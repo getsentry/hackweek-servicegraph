@@ -1,11 +1,20 @@
-
 def departments():
-    return ["Books", "Electronics", "Sports", "Jewellery", "Watches", "Automotive"]
+    return ["books", "electronics", "sports", "jewellery", "watches", "automotive"]
 
 
 def payment_providers():
-    return ["PayPal", "Due", "Stripe", "FlagShip", "Square", "BitPay", "Adyen", "GoCardless", "Visa"]
+    return [
+        "paypal",
+        "due",
+        "stripe",
+        "flagship",
+        "square",
+        "bitpay",
+        "adyen",
+        "gocardless",
+        "visa",
+    ]
 
 
 def authentication_providers():
-    return ["Google", "Facebook", "Twitter", "Yahoo", "Apple", "Microsoft", "Github"]
+    return ["google", "facebook", "twitter", "yahoo", "apple", "microsoft", "github"]
