@@ -904,95 +904,15 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       console.log("this.state.staging", this.state.staging);
 
-      // const committed = {
-      //   nodes: new Set(this.state.committed.nodes),
-      //   edges: new Set(this.state.committed.edges),
-      // };
-
-      // // Removal of any nodes that are parents (i.e. has children) will also delete their children.
-      // // We set parents of nodes to be removed to be null, and the parents of their children to be null.
-      // this.state.staging.remove.nodes.forEach((node_id) => {
-      //   this.graph?.nodes(`[id = '${node_id}']`).move({ parent: null });
-      //   this.graph?.nodes(`[parent = '${node_id}']`).move({ parent: null });
-      // });
-
-      // this.state.staging.remove.nodes.forEach((node_id) => {
-      //   if (!committed.nodes.has(node_id)) {
-      //     throw Error(`expect node to exist in committed graph: ${node_id}`);
-      //   }
-      //   if (this.graph?.nodes(`[id = '${node_id}']`).empty()) {
-      //     throw Error(
-      //       `componentDidUpdate: expect node to exist in cytoscape graph: ${node_id}`
-      //     );
-      //   }
-
-      //   const prevLength = this.graph?.nodes().toArray().length ?? 0;
-
-      //   // console.log("graph nodes (before delete)", prevLength);
-      //   committed.nodes.delete(node_id);
-
-      //   // console.log(
-      //   //   `number of ${node_id} nodes`,
-      //   //   this.graph?.nodes(`[id = '${node_id}']`).toArray().length
-      //   // );
-
-      //   // console.log(
-      //   //   "num of children for ",
-      //   //   node_id,
-      //   //   this.graph?.nodes(`[parent = '${node_id}']`).toArray().length
-      //   // );
-
-      //   // console.log(
-      //   //   "deleting",
-      //   //   node_id,
-      //   //   this.state.staging.previousNodes.get(node_id)
-      //   // );
-      //   this.graph?.remove(`node[id = '${node_id}']`);
-
-      //   const afterLength = this.graph?.nodes().toArray().length ?? 0;
-      //   // console.log("graph nodes (after delete)", afterLength);
-
-      //   invariant(
-      //     prevLength - afterLength === 1,
-      //     "expected removal of only one node"
-      //   );
-      // });
-
-      // this.state.staging.add.nodes.forEach((node_id) => {
-      //   const node = this.state.nodes.get(node_id);
-      //   if (node) {
-      //     committed.nodes.add(node_id);
-
-      //     preprocessNodeForCytoscape((node) => {
-      //       this.graph?.add(node);
-      //     })({ node, last_activity: this.state.node_activities.get(node_id) });
-      //   } else {
-      //     throw Error(`unable to find node: ${node_id}`);
-      //   }
-      // });
-
-      // this.state.staging.add.edges.forEach((edge_key) => {
-      //   const edge = this.state.edges.get(edge_key);
-      //   if (edge) {
-      //     committed.edges.add(edge_key);
-      //     this.graph?.add(edgeToCytoscape(edge));
-      //   } else {
-      //     throw Error(`unable to find edge: ${edge_key}`);
-      //   }
-      // });
-
-      // this.state.staging.remove.edges.forEach((edge_key) => {
-      //   const edge = this.state.staging.previousEdges.get(edge_key);
-      //   if (edge) {
-      //     committed.edges.delete(getEdgeKey(edge));
-      //     const cytoscapeEdge = edgeToCytoscape(edge);
-      //     this.graph?.remove(
-      //       `edge[source = '${cytoscapeEdge.data.source}'][target = '${cytoscapeEdge.data.target}']`
-      //     );
-      //   } else {
-      //     throw Error(`unable to find edge: ${edge_key}`);
-      //   }
-      // });
+      // this.graph
+      //   ?.nodes("*")
+      //   .toArray()
+      //   .forEach((node) => {
+      //     const node_id = node.id();
+      //     if (!this.state.nodes.has(node_id)) {
+      //       this.graph?.remove(`node[id = '${node_id}']`);
+      //     }
+      //   });
 
       // this.state.nodes.forEach((node) => {
       //   if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
@@ -1002,50 +922,65 @@ class ServiceGraphView extends React.Component<Props, State> {
       //       node,
       //       last_activity: this.state.node_activities.get(node.node_id),
       //     });
-      //   }
-
-      //   if (node.parent_id) {
-      //     this.graph
-      //       ?.nodes(`[id = '${node.node_id}']`)
-      //       .move({ parent: node.parent_id });
+      //     console.log("add node");
       //   }
       // });
 
-      // this.state.edges.forEach((edge) => {
-      //   if (!this.state.nodes.has(edge.from_node_id)) {
-      //     invariant(false, `source node does not exist ${edge.from_node_id}`);
+      // this.state.nodes.forEach((node) => {
+      //   if (node.parent_id && this.state.nodes.has(node.parent_id)) {
+      //     this.graph
+      //       ?.nodes(`[id = '${node.node_id}']`)
+      //       .move({ parent: node.parent_id });
+      //     console.log("repair parent", {
+      //       node_id: node.node_id,
+      //       parent_id: node.parent_id,
+      //     });
       //   }
+      // });
 
+      // this.graph
+      //   ?.edges("*")
+      //   .toArray()
+      //   .forEach((edge) => {
+      //     const source_id = edge.source().id();
+      //     const destination_id = edge.target().id();
+      //     if (
+      //       !this.state.edges.has(
+      //         getEdgeKeyWithSourceTarget(source_id, destination_id)
+      //       )
+      //     ) {
+      //       const selector = `edge[source = '${source_id}'][target = '${destination_id}']`;
+      //       this.graph?.remove(selector);
+      //       console.log("remove edge");
+      //     }
+      //   });
+
+      // this.state.edges.forEach((edge) => {
       //   const selector = `edge[source = '${edge.from_node_id}'][target = '${edge.to_node_id}']`;
 
       //   if (this.graph?.elements(selector).empty()) {
       //     this.graph?.add(edgeToCytoscape(edge));
-      //     console.log("repair");
+      //     console.log("add edge");
       //   }
       // });
 
-      // -----
+      //-----
 
-      this.graph
-        ?.nodes("*")
-        .toArray()
-        .forEach((node) => {
-          const node_id = node.id();
-          if (!this.state.nodes.has(node_id)) {
-            this.graph?.remove(`node[id = '${node_id}']`);
-          }
-        });
+      this.graph?.remove(`*`);
 
-      this.state.nodes.forEach((node) => {
-        if (this.graph?.nodes(`[id = '${node.node_id}']`).empty()) {
-          preprocessNodeForCytoscape((node) => {
-            this.graph?.add(node);
-          })({
-            node,
-            last_activity: this.state.node_activities.get(node.node_id),
-          });
-          console.log("add node");
-        }
+      console.log("this.state.nodes", this.state.nodes);
+
+      this.state.nodes.forEach((node) =>
+        preprocessNodeForCytoscape((node) => {
+          this.graph?.add(node);
+        })({
+          node,
+          last_activity: this.state.node_activities.get(node.node_id),
+        })
+      );
+
+      this.state.edges.forEach((edge) => {
+        this.graph?.add(edgeToCytoscape(edge));
       });
 
       this.state.nodes.forEach((node) => {
@@ -1060,31 +995,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         }
       });
 
-      this.graph
-        ?.edges("*")
-        .toArray()
-        .forEach((edge) => {
-          const source_id = edge.source().id();
-          const destination_id = edge.target().id();
-          if (
-            !this.state.edges.has(
-              getEdgeKeyWithSourceTarget(source_id, destination_id)
-            )
-          ) {
-            const selector = `edge[source = '${source_id}'][target = '${destination_id}']`;
-            this.graph?.remove(selector);
-            console.log("remove edge");
-          }
-        });
-
-      this.state.edges.forEach((edge) => {
-        const selector = `edge[source = '${edge.from_node_id}'][target = '${edge.to_node_id}']`;
-
-        if (this.graph?.elements(selector).empty()) {
-          this.graph?.add(edgeToCytoscape(edge));
-          console.log("add edge");
-        }
-      });
+      // ----
 
       // TODO: simplify?
       const committed = {
@@ -1096,30 +1007,10 @@ class ServiceGraphView extends React.Component<Props, State> {
         ),
       };
 
-      this.graph?.remove(`*`);
-
-      this.state.nodes.forEach((node) =>
-        preprocessNodeForCytoscape((node) => {
-          this.graph?.add(node);
-        })({
-          node,
-          last_activity: this.state.node_activities.get(node.node_id),
-        })
-      );
-      this.state.edges.forEach((edge) => {
-        this.graph?.add(edgeToCytoscape(edge));
-      });
-
-      // -----
-
       this.styleEdges();
 
       this.layout = this.graph.elements().makeLayout(makeLayoutConfig());
       this.layout.run();
-
-      // console.log("pre-committed", committed);
-
-      // console.log("nodes", this.state.nodes);
 
       console.log("componentDidUpdate - commit");
       this.setState({
