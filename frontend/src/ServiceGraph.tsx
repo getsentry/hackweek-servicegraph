@@ -42,6 +42,8 @@ import RangeSliderComponent from "./RangeSliderComponent";
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
+const API_PATH = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api" : "api";
+
 const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
 
 function makeLayoutConfig() {
@@ -118,7 +120,7 @@ const fetchServiceGraph =
         endDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
       }
     }
-    return fetch("http://127.0.0.1:8000/service-map", {
+    return fetch(API_PATH + "/service-map", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -137,7 +139,7 @@ const fetchServiceGraph =
   };
 
 const fetchTimelineHistogram = (): Promise<any> => {
-  return fetch("http://127.0.0.1:8000/histogram", {
+  return fetch(API_PATH + "/histogram", {
     method: "POST",
     mode: "cors",
     headers: {
@@ -698,7 +700,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-shape": "triangle",
             },
           },
-          /*
           {
             selector: 'edge[group="unhealthy"]',
             style: {
@@ -706,7 +707,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-color": colors.EDGE_UNHEALTHY,
             },
           },
-          */
           {
             selector: 'node[group="unhealthy"]',
             style: {
@@ -737,10 +737,17 @@ class ServiceGraphView extends React.Component<Props, State> {
             },
           },
           {
-            selector: "edge:selected",
+            selector: 'edge[group="unhealthy"]:selected',
             style: {
-              "line-color": colors.SELECTED,
-              "target-arrow-color": colors.SELECTED,
+              "line-color": colors.EDGE_UNHEALTHY_SELECTED,
+              "target-arrow-color": colors.EDGE_UNHEALTHY_SELECTED,
+            },
+          },
+          {
+            selector: 'edge[group!="unhealthy"]:selected',
+            style: {
+              "line-color": colors.EDGE_HEALTHY_SELECTED,
+              "target-arrow-color": colors.EDGE_HEALTHY_SELECTED,
             },
           },
         ],

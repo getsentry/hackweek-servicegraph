@@ -57,3 +57,6 @@ setup-venv: .venv/bin/python
 	virtualenv -p $$PYTHON_VERSION .venv
 	pip install -r requirements.txt
 
+deploy-fe:
+	cd frontend && yarn build
+	scp -r frontend/build/* demouser@143.198.134.120:/var/www/servicegra.ph/html
