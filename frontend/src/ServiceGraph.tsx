@@ -50,10 +50,12 @@ function makeLayoutConfig() {
     nodeDimensionsIncludeLabels: true,
     packComponents: false,
     idealEdgeLength: () => 200,
-    gravity: 0.2,
+    // gravity: 0,
     nodeRepulsion: () => 4500 * 1.5,
-    nestingFactor: 0,
+    // nestingFactor: 0,
     nodeSeparation: 150,
+    tilingPaddingVertical: 50,
+    tilingPaddingHorizontal: 50,
   };
   // return {
   //   name: "cola",
