@@ -47,6 +47,10 @@ function makeLayoutConfig() {
   return {
     name: "fcose",
     fit: true,
+    // randomize: true,
+    // animationDuration: 1000,
+    animate: false,
+    // quality: "proof",
     nodeDimensionsIncludeLabels: true,
     packComponents: false,
     idealEdgeLength: () => 200,
