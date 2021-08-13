@@ -212,6 +212,7 @@ pub struct ServiceMap {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Histogram {
     pub buckets: Vec<Bucket>,
+    pub granularity_seconds: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

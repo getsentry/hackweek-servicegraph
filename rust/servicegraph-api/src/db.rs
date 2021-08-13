@@ -364,12 +364,15 @@ pub async fn query_histogram(
 ) -> Result<Histogram, Error> {
     let (start_date_bound, end_date_bound) = default_date_range(params);
 
+    let mut granularity_seconds = 60;
     let mut duration_func = "toStartOfMinute";
     let duration = end_date_bound.signed_duration_since(start_date_bound);
     if duration > Duration::days(14) {
-        duration_func = "toStartOfDay"
+        duration_func = "toStartOfDay";
+        granularity_seconds = 60 * 60 * 24;
     } else if duration > Duration::hours(24) {
         duration_func = "toStartOfHour";
+        granularity_seconds = 60 * 60;
     }
 
     let block = client
@@ -403,7 +406,7 @@ pub async fn query_histogram(
         });
     }
 
-    Ok(Histogram { buckets: buckets })
+    Ok(Histogram { buckets: buckets, granularity_seconds: granularity_seconds })
 }
 
 #[cfg(test)]
