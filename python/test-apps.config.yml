@@ -1,0 +1,95 @@
+#  The following values are supported
+#  an integer will be returned as the status code: 200, 427....
+#  a string will be translated to a status code as follows
+#    'ok' -> 200
+#    'error' -> 400
+#    'expected' -> 400
+#    'critical' -> 500
+#    'unexpected' -> 500
+#    'random' --> will generate a random outcome 200,400,500
+#  Anything else will be ignored and the endpoint will randomly succeed or fail with 400 or 500
+# for random use "random" (although anything would work)
+
+
+welcome:
+  index: ok
+  browse: ok
+  cart: ok
+shop:
+  overview: ok
+payment:
+  submit: ok
+authentication:
+  authenticate: ok
+payment_provider:
+  paypal:
+    check: ok
+    validate: ok
+    transfer: ok
+  due:
+    check: ok
+    validate: ok
+    transfer: ok
+  stripe:
+    check: ok
+    validate: ok
+    transfer: ok
+  flagship:
+    check: ok
+    validate: ok
+    transfer: ok
+  square:
+    check: ok
+    validate: ok
+    transfer: ok
+  bitypay:
+    check: ok
+    validate: ok
+    transfer: ok
+  adyen:
+    check: ok
+    validate: ok
+    transfer: ok
+  gocardless:
+    check: ok
+    validate: ok
+    transfer: ok
+  visa:
+    check: ok
+    validate: ok
+    transfer: ok
+auth_provider:
+  google:
+    authenticate: ok
+    mfa: ok
+  facebook:
+    authenticate: ok
+    mfa: ok
+  twitter:
+    authenticate: ok
+    mfa: ok
+  yahoo:
+    authenticate: ok
+    mfa: ok
+  apple:
+    authenticate: ok
+    mfa: ok
+  microsoft:
+    authenticate: ok
+    mfa: ok
+  github:
+    authenticate: ok
+    mfa: ok
+warehouse:
+  books:
+    list: ok
+  electronics:
+    list: ok
+  sports:
+    list: ok
+  jewellery:
+    list: ok
+  watches:
+    list: ok
+  automotive:
+    list: ok

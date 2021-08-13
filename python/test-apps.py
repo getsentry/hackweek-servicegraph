@@ -3,6 +3,8 @@ import uuid
 import requests
 import logging
 import random
+import yaml
+import pathlib
 
 from flask import Flask, request
 from werkzeug.serving import run_simple
@@ -16,7 +18,6 @@ APP_PORT = 5000
 SERVICE_NS = uuid.UUID("13f07817-8ccb-4961-8507-1a3e6fd02066")
 minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 
-
 _prand_seed = random.random()
 
 
@@ -29,6 +30,59 @@ def can_fail(name, cutoff):
     if val < cutoff:
         return val
     return max(random.random(), cutoff)
+
+
+def get_at_path(obj, path):
+    """
+    Get value at path
+    """
+
+    paths = path.split(".")
+    ret_val = obj
+
+    for segment in paths:
+        try:
+            ret_val = ret_val.get(segment, None)
+            if ret_val is None:
+                break
+        except:
+            return None
+    return ret_val
+
+
+def get_config():
+    try:
+        config_file_name =pathlib.Path(__file__).parent.joinpath("test-apps.config.yml").resolve()
+        with open(config_file_name, "r") as f:
+            return yaml.load(f)
+    except:
+        return {}
+
+
+def check_endpoint_status(name):
+    config = get_config()
+    status = get_at_path(config, name)
+
+    if type(status) == int:
+        return status
+    elif type(status) == str:
+        status = status.lower()
+        if status == "ok":
+            return 200
+        if status == "error" or status == "expected":
+            return 400
+        if status == "critical" or status == "unexpected":
+            return 500
+
+    # if we are here just do a random thing:
+    status = can_fail(name, 0.9)
+
+    if status < 0.9:
+        return 200
+    elif status < 0.95:
+        return 400
+    else:
+        return 500
 
 
 def main():
@@ -59,6 +113,10 @@ def create_main_service():
 
     @app.route("/", methods=["POST", "PUT"], endpoint="index")
     def index():
+        status = check_endpoint_status("welcome.index")
+        if status >= 400:
+            return "failed", status
+
         _log.debug("in main")
         try:
             req = request.json
@@ -76,11 +134,19 @@ def create_main_service():
 
     @app.route("/browse", methods=["POST", "PUT"], endpoint="browse")
     def browse():
+        status = check_endpoint_status("welcome.browse")
+        if status >= 400:
+            return "failed", status
+
         resp = requests.post(to_url("shop/"), json=request.json)
         return from_response(resp)
 
     @app.route("/cart", methods=["POST", "PUT"], endpoint="shopping-cart")
     def browse():
+        status = check_endpoint_status("welcome.cart")
+        if status >= 400:
+            return "failed", status
+
         resp = requests.post(to_url("pay/"), json=request.json)
         return from_response(resp)
 
@@ -93,7 +159,9 @@ def create_shop_service():
 
     @app.route("/", methods=["POST", "PUT"], endpoint="overview")
     def shop():
-        _log.debug("in shop")
+        status = check_endpoint_status("shop.overview")
+        if status >= 400:
+            return "failed", status
 
         try:
             req = request.json
@@ -123,7 +191,9 @@ def create_payment_service():
 
     @app.route("/", methods=["POST", "PUT"], endpoint="submit-payment")
     def payment():
-        _log.debug("in payment")
+        status = check_endpoint_status("payment.submit")
+        if status >= 400:
+            return "failed", status
 
         try:
             req = request.json
@@ -162,7 +232,9 @@ def create_authentication_service():
 
     @app.route("/", methods=["POST", "PUT"], endpoint="authenticate")
     def authentication():
-        _log.debug("in auth")
+        status = check_endpoint_status("authentication.authenticate")
+        if status >= 400:
+            return "failed", status
 
         try:
             req = request.json
@@ -196,24 +268,21 @@ def create_payment_provider_service(name):
     @app.route("/check", methods=["POST", "PUT"], endpoint="check-account")
     def check_account():
         _log.debug("in check account")
-        return "checked"
+        status = check_endpoint_status(f"payment_provider.{name}.check")
+        return "", status
+
 
     @app.route("/validate", methods=["POST", "PUT"], endpoint="validate")
     def validate():
-        _log.debug("in validate")
-        payment_status = can_fail(name, 0.9)
-
-        if payment_status < 0.9:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Payment Declined", 404
-        else:
-            return "Provider is experiencing some difficulties", 500
+        _log.debug("in validate account")
+        status = check_endpoint_status(f"payment_provider.{name}.validate")
+        return "", status
 
     @app.route("/transfer", methods=["POST", "PUT"], endpoint="transfer")
     def transfer():
-        _log.debug("in check transfer")
-        return "ok"
+        _log.debug("in transfer account")
+        status = check_endpoint_status(f"payment_provider.{name}.transfer")
+        return "", status
 
     return app
 
@@ -227,26 +296,14 @@ def create_auth_provider_service(name):
     )
     def authenticate():
         _log.debug(f"in payment provider {name}")
-        payment_status = can_fail(name, 0.9)
-
-        if payment_status < 0.9:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Bad Credentials", 401
-        else:
-            return "Provider is experiencing some difficulties", 500
+        status = check_endpoint_status(f"auth_provider.{name}.authenticate")
+        return "", status
 
     @app.route("/2fa", methods=["POST", "PUT"], endpoint=f"2fa")
     def mfa():
         _log.debug(f"in payment provider {name}")
-        payment_status = can_fail(name, 0.9)
-
-        if payment_status < 0.9:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Bad Credentials", 401
-        else:
-            return "Provider is experiencing some difficulties", 500
+        status = check_endpoint_status(f"auth_provider.{name}.mfa")
+        return "", status
 
     return app
 
@@ -258,14 +315,8 @@ def create_warehouse_service(name):
     @app.route("/", methods=["POST", "PUT"], endpoint=f"list-products")
     def check_product():
         _log.debug(f"in warehouse {name}")
-        payment_status = can_fail(name, 0.9)
-
-        if payment_status < 0.9:
-            return "Success", 200
-        elif payment_status < 0.95:
-            return "Not Available", 401
-        else:
-            return "Warehouse down", 500
+        status = check_endpoint_status(f"warehouse.{name}.list")
+        return "", status
 
     return app
 
