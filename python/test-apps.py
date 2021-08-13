@@ -1,4 +1,4 @@
-import minimal
+import servicegraph_sdk
 import uuid
 import requests
 import logging
@@ -16,7 +16,7 @@ _log = logging.getLogger("main")
 REPORTING_PORT = 8000
 APP_PORT = 5000
 SERVICE_NS = uuid.UUID("13f07817-8ccb-4961-8507-1a3e6fd02066")
-minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
+servicegraph_sdk.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 
 _prand_seed = random.random()
 

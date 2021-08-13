@@ -167,7 +167,7 @@ class Client(object):
         else:
             raise TypeError("unknown type")
 
-        seen_key = (name, type)
+        seen_key = (namespace, name)
         node_id = self.known_nodes.get(seen_key)
         if node_id is not None:
             return node_id
