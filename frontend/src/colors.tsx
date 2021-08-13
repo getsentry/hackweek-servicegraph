@@ -17,6 +17,8 @@ const colors = {
   // EDGES
   EDGE_HEALTHY: "#888",
   EDGE_UNHEALTHY: "#ffbdb4",
+  EDGE_HEALTHY_SELECTED: "black",
+  EDGE_UNHEALTHY_SELECTED: "red"
 };
 
 export default colors;

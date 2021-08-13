@@ -696,7 +696,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-shape": "triangle",
             },
           },
-          /*
           {
             selector: 'edge[group="unhealthy"]',
             style: {
@@ -704,7 +703,6 @@ class ServiceGraphView extends React.Component<Props, State> {
               "target-arrow-color": colors.EDGE_UNHEALTHY,
             },
           },
-          */
           {
             selector: 'node[group="unhealthy"]',
             style: {
@@ -735,10 +733,17 @@ class ServiceGraphView extends React.Component<Props, State> {
             },
           },
           {
-            selector: "edge:selected",
+            selector: 'edge[group="unhealthy"]:selected',
             style: {
-              "line-color": colors.SELECTED,
-              "target-arrow-color": colors.SELECTED,
+              "line-color": colors.EDGE_UNHEALTHY_SELECTED,
+              "target-arrow-color": colors.EDGE_UNHEALTHY_SELECTED,
+            },
+          },
+          {
+            selector: 'edge[group!="unhealthy"]:selected',
+            style: {
+              "line-color": colors.EDGE_HEALTHY_SELECTED,
+              "target-arrow-color": colors.EDGE_HEALTHY_SELECTED,
             },
           },
         ],
