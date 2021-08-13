@@ -5,6 +5,16 @@
 servicegraph is a simple system that helps creating a map of interactions of different
 pieces in a system and how it behaves.
 
+## Contents
+
+Here is what's in the repo:
+
+* [Server](https://github.com/getsentry/hackweek-servicegraph/tree/main/rust/servicegraph-api)
+* [Python SDK](https://github.com/getsentry/hackweek-servicegraph/blob/main/python/servicegraph_sdk.py)
+* [Frontend](https://github.com/getsentry/hackweek-servicegraph/blob/main/frontend)
+* [Example App](https://github.com/getsentry/hackweek-servicegraph/blob/main/python/hello.py)
+* [Simulation and more](https://github.com/getsentry/hackweek-servicegraph/tree/main/python)
+
 ## Summary
 
 Each participant in the system reports to a central service its observations of
