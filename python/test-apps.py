@@ -54,7 +54,7 @@ def get_config():
     try:
         config_file_name =pathlib.Path(__file__).parent.joinpath("test-apps.config.yml").resolve()
         with open(config_file_name, "r") as f:
-            return yaml.load(f)
+            return yaml.load(f, Loader=yaml.FullLoader)
     except:
         return {}
 
@@ -132,7 +132,7 @@ def create_main_service():
                 return "failed to login", 401
         return ""
 
-    @app.route("/browse", methods=["POST", "PUT"], endpoint="browse")
+    @app.route("/browse/", methods=["POST", "PUT"], endpoint="browse")
     def browse():
         status = check_endpoint_status("welcome.browse")
         if status >= 400:
@@ -141,7 +141,7 @@ def create_main_service():
         resp = requests.post(to_url("shop/"), json=request.json)
         return from_response(resp)
 
-    @app.route("/cart", methods=["POST", "PUT"], endpoint="shopping-cart")
+    @app.route("/cart/", methods=["POST", "PUT"], endpoint="shopping-cart")
     def browse():
         status = check_endpoint_status("welcome.cart")
         if status >= 400:
@@ -191,6 +191,7 @@ def create_payment_service():
 
     @app.route("/", methods=["POST", "PUT"], endpoint="submit-payment")
     def payment():
+        _log.debug("in payment:submit-payment")
         status = check_endpoint_status("payment.submit")
         if status >= 400:
             return "failed", status
@@ -209,16 +210,16 @@ def create_payment_service():
             _log.debug(f"invalid payment provider {payment_provider}")
             return "invalid authenticator provider", 400
 
-        pay_url = to_url(f"pay/{payment_provider}/check")
+        pay_url = to_url(f"pay/{payment_provider}/check/")
 
         resp = requests.post(pay_url, json=req)
 
         if resp.ok:
-            pay_url = to_url(f"pay/{payment_provider}/validate")
+            pay_url = to_url(f"pay/{payment_provider}/validate/")
             resp = requests.post(pay_url, json=req)
 
             if resp.ok:
-                pay_url = to_url(f"pay/{payment_provider}/transfer")
+                pay_url = to_url(f"pay/{payment_provider}/transfer/")
                 resp = requests.post(pay_url, json=req)
 
         return from_response(resp)
@@ -265,20 +266,20 @@ def create_payment_provider_service(name):
     app = Flask(name)
     app.debug = True
 
-    @app.route("/check", methods=["POST", "PUT"], endpoint="check-account")
+    @app.route("/check/", methods=["POST", "PUT"], endpoint="check-account")
     def check_account():
         _log.debug("in check account")
         status = check_endpoint_status(f"payment_provider.{name}.check")
         return "", status
 
 
-    @app.route("/validate", methods=["POST", "PUT"], endpoint="validate")
+    @app.route("/validate/", methods=["POST", "PUT"], endpoint="validate")
     def validate():
         _log.debug("in validate account")
         status = check_endpoint_status(f"payment_provider.{name}.validate")
         return "", status
 
-    @app.route("/transfer", methods=["POST", "PUT"], endpoint="transfer")
+    @app.route("/transfer/", methods=["POST", "PUT"], endpoint="transfer")
     def transfer():
         _log.debug("in transfer account")
         status = check_endpoint_status(f"payment_provider.{name}.transfer")
@@ -292,14 +293,14 @@ def create_auth_provider_service(name):
     app.debug = True
 
     @app.route(
-        "/credentials", methods=["POST", "PUT"], endpoint=f"auth-{name}-credentials"
+        "/credentials/", methods=["POST", "PUT"], endpoint=f"auth-{name}-credentials"
     )
     def authenticate():
         _log.debug(f"in payment provider {name}")
         status = check_endpoint_status(f"auth_provider.{name}.authenticate")
         return "", status
 
-    @app.route("/2fa", methods=["POST", "PUT"], endpoint=f"2fa")
+    @app.route("/2fa/", methods=["POST", "PUT"], endpoint=f"2fa")
     def mfa():
         _log.debug(f"in payment provider {name}")
         status = check_endpoint_status(f"auth_provider.{name}.mfa")
