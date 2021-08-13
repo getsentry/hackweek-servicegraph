@@ -511,7 +511,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         const ghostNode = createGhostNode(node);
         nodesMap.set(ghostNode.node_id, ghostNode);
         staging.add.nodes.add(ghostNode.node_id);
-        console.log("create ghosts");
+        // console.log("create ghosts");
       }
     });
 
@@ -533,7 +533,7 @@ class ServiceGraphView extends React.Component<Props, State> {
       // when prevState.committed.nodes is traversed
       // staging.add.nodes.add(node.node_id);
     });
-    console.log("prevState.committed", prevState.committed);
+    // console.log("prevState.committed", prevState.committed);
 
     prevState.committed.nodes.forEach((node_id) => {
       if (!staging.add.nodes.has(node_id)) {
@@ -908,7 +908,7 @@ class ServiceGraphView extends React.Component<Props, State> {
         this.layout.stop();
       }
 
-      console.log("this.state.staging", this.state.staging);
+      // console.log("this.state.staging", this.state.staging);
 
       // this.graph
       //   ?.nodes("*")
@@ -974,7 +974,7 @@ class ServiceGraphView extends React.Component<Props, State> {
 
       this.graph?.remove(`*`);
 
-      console.log("this.state.nodes", this.state.nodes);
+      // console.log("this.state.nodes", this.state.nodes);
 
       this.state.nodes.forEach((node) =>
         preprocessNodeForCytoscape((node) => {
@@ -994,10 +994,10 @@ class ServiceGraphView extends React.Component<Props, State> {
           this.graph
             ?.nodes(`[id = '${node.node_id}']`)
             .move({ parent: node.parent_id });
-          console.log("repair parent", {
-            node_id: node.node_id,
-            parent_id: node.parent_id,
-          });
+          // console.log("repair parent", {
+          //   node_id: node.node_id,
+          //   parent_id: node.parent_id,
+          // });
         }
       });
 
