@@ -43,7 +43,7 @@ class RangeSliderComponent extends React.Component<Props, State> {
 
   createDiagram = () => {
     const node = this.node.current;
-    if (!this.props.data || !node) {
+    if (!this.props.data || this.props.data?.buckets.length === 0 || !node) {
       return;
     }
     if (!this.chart) {
