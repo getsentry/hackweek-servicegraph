@@ -212,9 +212,11 @@ function NodeDetails({
           ? `${format(lastActivityDate as Date, "PPpp")} - ${relativeDate}`
           : "unknown"}
       </div>
+      {/* buggy
       <div>✅ Ok: {node.status_ok}</div>
       <div>🛑 Expected error: {node.status_expected_error}</div>
       <div>🔥 Unexpected error: {node.status_unexpected_error}</div>
+      */}
     </div>
   );
 }
@@ -254,6 +256,13 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
   const { source, destination } = details;
   return (
     <div className="grid grid-cols-1">
+      <strong>Edge</strong>
+      <div>Description: {edge.description || "none"}</div>
+      <div>Class: {edge.class || "generic"}</div>
+      <div>✅ OK: {edge.status_ok}</div>
+      <div>🛑 Expected Error: {edge.status_expected_error}</div>
+      <div>🔥 Unexpected Error: {edge.status_unexpected_error}</div>
+      <hr />
       <strong>Source</strong>
       <NodeDetails node={source.node} last_activity={source.last_activity} />
       <hr />
@@ -262,14 +271,6 @@ function Details(props: { details: DetailsPayloadDereferenced | undefined }) {
         node={destination.node}
         last_activity={destination.last_activity}
       />
-      <hr />
-      <strong>Edge</strong>
-
-      <div>Description: {edge.description || "none"}</div>
-      <div>Class: {edge.class || "generic"}</div>
-      <div>✅ OK: {edge.status_ok}</div>
-      <div>🛑 Expected Error: {edge.status_expected_error}</div>
-      <div>🔥 Unexpected Error: {edge.status_unexpected_error}</div>
     </div>
   );
 }
