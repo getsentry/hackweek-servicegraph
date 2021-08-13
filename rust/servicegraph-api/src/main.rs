@@ -26,15 +26,17 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount(
-            "/",
+            "/api/",
             routes![
-                endpoints::submit,
                 endpoints::query_graph,
                 endpoints::query_active_nodes,
                 endpoints::query_histogram,
                 endpoints::query_service_map,
                 endpoints::health
             ],
+        ).
+        mount(
+            "/", routes![endpoints::submit]
         )
         .mount("/", rocket_cors::catch_all_options_routes())
         .attach(cors.clone())

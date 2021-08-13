@@ -41,6 +41,8 @@ import RangeSliderComponent from "./RangeSliderComponent";
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
+const API_PATH = process.env.NODE_ENV === "development" ? "http://127.0.0.1/api" : "api";
+
 const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
 
 function makeLayoutConfig() {
@@ -114,7 +116,7 @@ const fetchServiceGraph =
     if (endDate) {
       endDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
     }
-    return fetch("http://127.0.0.1:8000/service-map", {
+    return fetch(API_PATH + "/service-map", {
       method: "POST",
       mode: "cors",
       headers: {
@@ -133,7 +135,7 @@ const fetchServiceGraph =
   };
 
 const fetchTimelineHistogram = (): Promise<any> => {
-  return fetch("http://127.0.0.1:8000/histogram", {
+  return fetch(API_PATH + "/histogram", {
     method: "POST",
     mode: "cors",
     headers: {
