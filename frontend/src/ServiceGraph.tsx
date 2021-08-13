@@ -41,7 +41,7 @@ import RangeSliderComponent from "./RangeSliderComponent";
 const cytoscapeNavigator = require("cytoscape-navigator");
 require("cytoscape-navigator/cytoscape.js-navigator.css");
 
-const API_PATH = process.env.NODE_ENV === "development" ? "http://127.0.0.1/api" : "api";
+const API_PATH = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api" : "api";
 
 const cytoscapeNodeHtmlLabel = require("cytoscape-node-html-label");
 
