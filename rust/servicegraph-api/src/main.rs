@@ -34,10 +34,8 @@ fn rocket() -> _ {
                 endpoints::query_service_map,
                 endpoints::health
             ],
-        ).
-        mount(
-            "/", routes![endpoints::submit]
         )
+        .mount("/", routes![endpoints::submit])
         .mount("/", rocket_cors::catch_all_options_routes())
         .attach(cors.clone())
         .manage(cors)

@@ -75,6 +75,11 @@ pub async fn query_service_map(
                 .find(|node| node.node.node_id == edge.to_node_id);
             if let Some(source_node) = source_node {
                 if let Some(target_node) = target_node {
+                    let params_service_to_service = params.from_types.len() == 1
+                        && params.from_types.contains(&NodeType::Service)
+                        && params.to_types.len() == 1
+                        && params.to_types.contains(&NodeType::Service);
+
                     let service_to_service = source_node.node.node_type == NodeType::Service
                         && target_node.node.node_type == NodeType::Service;
                     let service_to_transaction = source_node.node.node_type == NodeType::Service
@@ -83,6 +88,10 @@ pub async fn query_service_map(
                     let transaction_to_service = source_node.node.node_type
                         == NodeType::Transaction
                         && target_node.node.node_type == NodeType::Service;
+
+                    if params_service_to_service && service_to_service {
+                        return true;
+                    }
 
                     if service_to_service || service_to_transaction {
                         return false;

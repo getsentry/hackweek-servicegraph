@@ -406,7 +406,10 @@ pub async fn query_histogram(
         });
     }
 
-    Ok(Histogram { buckets: buckets, granularity_seconds: granularity_seconds })
+    Ok(Histogram {
+        buckets: buckets,
+        granularity_seconds: granularity_seconds,
+    })
 }
 
 #[cfg(test)]
