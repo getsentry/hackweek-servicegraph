@@ -59,4 +59,4 @@ setup-venv: .venv/bin/python
 
 deploy-fe:
 	cd frontend && yarn build
-	scp -r frontend/build/* demouser@143.198.134.120:/var/www/servicegra.ph/html
+	scp -r frontend/build/* demouser@143.198.134.120:/var/www/demo.servicegra.ph/html
