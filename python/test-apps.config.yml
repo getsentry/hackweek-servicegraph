@@ -10,7 +10,6 @@
 #  Anything else will be ignored and the endpoint will randomly succeed or fail with 400 or 500
 # for random use "random" (although anything would work)
 
-
 welcome:
   index: ok
   browse: ok
