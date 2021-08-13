@@ -17,6 +17,20 @@ SERVICE_NS = uuid.UUID("13f07817-8ccb-4961-8507-1a3e6fd02066")
 minimal.init(port=REPORTING_PORT, service_ns=SERVICE_NS, project_id=1)
 
 
+_prand_seed = random.random()
+
+
+def prand(value):
+    return random.Random(hash((_prand_seed, value)))
+
+
+def can_fail(name, cutoff):
+    val = prand(name).random()
+    if val < cutoff:
+        return val
+    return max(random.random(), cutoff)
+
+
 def main():
     _configure_logging()
     apps = {
@@ -187,9 +201,9 @@ def create_payment_provider_service(name):
     @app.route("/validate", methods=["POST", "PUT"], endpoint="validate")
     def validate():
         _log.debug("in validate")
-        payment_status = random.random()
+        payment_status = can_fail(name, 0.9)
 
-        if payment_status < 0.8:
+        if payment_status < 0.9:
             return "Success", 200
         elif payment_status < 0.95:
             return "Payment Declined", 404
@@ -213,9 +227,9 @@ def create_auth_provider_service(name):
     )
     def authenticate():
         _log.debug(f"in payment provider {name}")
-        payment_status = random.random()
+        payment_status = can_fail(name, 0.9)
 
-        if payment_status < 0.8:
+        if payment_status < 0.9:
             return "Success", 200
         elif payment_status < 0.95:
             return "Bad Credentials", 401
@@ -225,9 +239,9 @@ def create_auth_provider_service(name):
     @app.route("/2fa", methods=["POST", "PUT"], endpoint=f"2fa")
     def mfa():
         _log.debug(f"in payment provider {name}")
-        payment_status = random.random()
+        payment_status = can_fail(name, 0.9)
 
-        if payment_status < 0.8:
+        if payment_status < 0.9:
             return "Success", 200
         elif payment_status < 0.95:
             return "Bad Credentials", 401
@@ -244,9 +258,9 @@ def create_warehouse_service(name):
     @app.route("/", methods=["POST", "PUT"], endpoint=f"list-products")
     def check_product():
         _log.debug(f"in warehouse {name}")
-        payment_status = random.random()
+        payment_status = can_fail(name, 0.9)
 
-        if payment_status < 0.8:
+        if payment_status < 0.9:
             return "Success", 200
         elif payment_status < 0.95:
             return "Not Available", 401

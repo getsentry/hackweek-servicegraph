@@ -25,6 +25,7 @@ const GlobalStyle = createGlobalStyle`
     border: 2px solid black;
     right: 10px;
     bottom: 10px;
+    height: 300px;
   }
 
   .cytoscape-navigatorView {
