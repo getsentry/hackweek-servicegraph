@@ -10,7 +10,7 @@ use crate::db::{register_edges, register_nodes};
 use crate::error::ApiError;
 use crate::payloads::{
     ActiveNodes, CombinedEdge, CommonQueryParams, Edge, Graph, GraphQueryParams, Histogram, Node,
-    NodeQueryParams, NodeType, ServiceMap, ServiceMapQueryParams,
+    NodeQueryParams, ServiceMap, ServiceMapQueryParams,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -60,63 +60,63 @@ pub async fn query_service_map(
     let graph = db::query_graph(&mut client, &params.clone().into()).await?;
     let active_nodes = db::query_active_nodes(&mut client, &params.clone().into()).await?;
 
-    let edges: Vec<CombinedEdge> = graph
-        .edges
-        .clone()
-        .into_iter()
-        .filter(|edge| {
-            let source_node = graph
-                .nodes
-                .iter()
-                .find(|node| node.node.node_id == edge.from_node_id);
-            let target_node = graph
-                .nodes
-                .iter()
-                .find(|node| node.node.node_id == edge.to_node_id);
-            if let Some(source_node) = source_node {
-                if let Some(target_node) = target_node {
-                    let params_service_to_service = params.from_types.len() == 1
-                        && params.from_types.contains(&NodeType::Service)
-                        && params.to_types.len() == 1
-                        && params.to_types.contains(&NodeType::Service);
+    // let edges: Vec<CombinedEdge> = graph
+    //     .edges
+    //     .clone()
+    //     .into_iter()
+    //     .filter(|edge| {
+    //         let source_node = graph
+    //             .nodes
+    //             .iter()
+    //             .find(|node| node.node.node_id == edge.from_node_id);
+    //         let target_node = graph
+    //             .nodes
+    //             .iter()
+    //             .find(|node| node.node.node_id == edge.to_node_id);
+    //         if let Some(source_node) = source_node {
+    //             if let Some(target_node) = target_node {
+    //                 let params_service_to_service = params.from_types.len() == 1
+    //                     && params.from_types.contains(&NodeType::Service)
+    //                     && params.to_types.len() == 1
+    //                     && params.to_types.contains(&NodeType::Service);
 
-                    let service_to_service = source_node.node.node_type == NodeType::Service
-                        && target_node.node.node_type == NodeType::Service;
-                    let service_to_transaction = source_node.node.node_type == NodeType::Service
-                        && target_node.node.node_type == NodeType::Transaction;
+    //                 let service_to_service = source_node.node.node_type == NodeType::Service
+    //                     && target_node.node.node_type == NodeType::Service;
+    //                 let service_to_transaction = source_node.node.node_type == NodeType::Service
+    //                     && target_node.node.node_type == NodeType::Transaction;
 
-                    let transaction_to_service = source_node.node.node_type
-                        == NodeType::Transaction
-                        && target_node.node.node_type == NodeType::Service;
+    //                 let transaction_to_service = source_node.node.node_type
+    //                     == NodeType::Transaction
+    //                     && target_node.node.node_type == NodeType::Service;
 
-                    if params_service_to_service && service_to_service {
-                        return true;
-                    }
+    //                 if params_service_to_service && service_to_service {
+    //                     return true;
+    //                 }
 
-                    if service_to_service || service_to_transaction {
-                        return false;
-                    }
+    //                 if service_to_service || service_to_transaction {
+    //                     return false;
+    //                 }
 
-                    if transaction_to_service {
-                        let has_child = graph
-                            .nodes
-                            .iter()
-                            .find(|node| {
-                                if let Some(parent_id) = node.node.parent_id {
-                                    return parent_id == target_node.node.node_id;
-                                }
-                                return false;
-                            })
-                            .is_some();
-                        if has_child {
-                            return false;
-                        }
-                    }
-                }
-            }
-            return true;
-        })
-        .collect();
+    //                 if transaction_to_service {
+    //                     let has_child = graph
+    //                         .nodes
+    //                         .iter()
+    //                         .find(|node| {
+    //                             if let Some(parent_id) = node.node.parent_id {
+    //                                 return parent_id == target_node.node.node_id;
+    //                             }
+    //                             return false;
+    //                         })
+    //                         .is_some();
+    //                     if has_child {
+    //                         return false;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         return true;
+    //     })
+    //     .collect();
 
     // let keep_nodes: BTreeSet<Uuid> =
     //     edges
@@ -135,10 +135,10 @@ pub async fn query_service_map(
     //     })
     //     .collect();
 
-    let graph = Graph {
-        edges,
-        nodes: graph.nodes,
-    };
+    // let graph = Graph {
+    //     edges,
+    //     nodes: graph.nodes,
+    // };
 
     if let Some(volume_filter) = params.traffic_volume {
         let mut volume_filter = cmp::min(volume_filter, 100);
